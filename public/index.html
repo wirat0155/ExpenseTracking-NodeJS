@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💰 ระบบบันทึกรายจ่าย | Expense Tracker</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💰</text></svg>">
+    <meta name="description" content="ระบบบันทึกรายรับรายจ่ายอย่างง่าย">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/expense/assets/css/app.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="/expense/assets/js/core/components.js"></script>
+    <script src="/expense/assets/js/core/utils.js"></script>
+    <script src="/expense/assets/js/core/api.js"></script>
+    <!-- Modular Index Scripts -->
+    <script src="/expense/assets/js/pages/index/state.js"></script>
+    <script src="/expense/assets/js/pages/index/ui.js"></script>
+    <script src="/expense/assets/js/pages/index/controller.js"></script>
+</head>
+
+<body class="min-h-screen">
+
+    <!-- Top Navigation Bar -->
+    <div id="sidebar-container"></div>
+
+    <main class="main-content">
+        <div class="max-w-5xl mx-auto w-full px-4 py-8 flex-1">
+            <!-- Breadcrumb -->
+            <nav class="breadcrumb fade-in">
+                <a href="/expense/index.html">Expense App</a>
+                <i class="bi bi-chevron-right"></i>
+                <span class="active">หน้าหลัก</span>
+            </nav>
+
+            <!-- Header -->
+            <header class="mb-10 fade-in">
+                <h1 class="text-3xl md:text-4xl font-bold text-blue-600 inline-block pb-1">
+                    <i class="bi bi-wallet2 text-blue-600"></i> ระบบบันทึกรายจ่าย
+                </h1>
+                <p class="mt-2 text-slate-500 font-medium">จัดการรายรับรายจ่ายทั้งหมดของคุณในที่เดียว</p>
+            </header>
+
+            <!-- Summary Cards -->
+            <section id="summary-section" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8 fade-in">
+                <div class="card-custom p-6 text-center">
+                    <p class="text-sm mb-1 uppercase tracking-wider font-semibold text-slate-500">จำนวนรายการ</p>
+                    <p id="totalCount" class="text-3xl font-bold text-blue-600">0</p>
+                </div>
+                <div class="card-custom p-6 text-center">
+                    <p class="text-sm mb-1 uppercase tracking-wider font-semibold text-slate-500">ยอดรวมทั้งหมด</p>
+                    <p id="totalAmount" class="text-3xl font-bold text-blue-600">฿0.00</p>
+                </div>
+            </section>
+
+            <!-- Add Expense Form -->
+            <section class="card-custom p-6 mb-8 fade-in">
+                <div class="flex items-center justify-between mb-5">
+                    <h2 class="text-lg font-bold text-blue-600"><i class="bi bi-plus-circle"></i> เพิ่มรายจ่าย</h2>
+                    <div id="budgetInfo"
+                        class="hidden text-[11px] font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-500 border border-slate-200 shadow-sm">
+                        Budget เดือนนี้: <span id="budgetUsageText" class="text-blue-600">—</span>
+                    </div>
+                </div>
+                <form id="expenseForm" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-sm mb-1.5 font-medium" data-theme-heading>รายการ <span
+                                class="text-red-400">*</span></label>
+                        <input type="text" id="title" required placeholder="เช่น ค่ากาแฟ" class="input-custom">
+                    </div>
+                    <div>
+                        <label class="block text-sm mb-1.5 font-medium" data-theme-heading>จำนวนเงิน <span
+                                class="text-red-400">*</span></label>
+                        <input type="number" id="amount" required min="0.01" step="0.01" placeholder="0.00"
+                            class="input-custom">
+                    </div>
+                    <div>
+                        <label class="block text-sm mb-1.5 font-medium" data-theme-heading>หมวดหมู่ <span
+                                class="text-red-400">*</span></label>
+                        <select id="category" required class="input-custom">
+                            <option value="">-- เลือกหมวดหมู่ --</option>
+                            <option value="อาหารและเครื่องดื่ม">🍔 อาหารและเครื่องดื่ม</option>
+                            <option value="การเดินทาง">🚗 การเดินทาง</option>
+                            <option value="สาธารณูปโภค">💡 สาธารณูปโภค</option>
+                            <option value="การศึกษา">📚 การศึกษา</option>
+                            <option value="สุขภาพ">🏥 สุขภาพ</option>
+                            <option value="ความบันเทิง">🎮 ความบันเทิง</option>
+                            <option value="อื่นๆ">📦 อื่นๆ</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm mb-1.5 font-medium" data-theme-heading>วันที่ <span
+                                class="text-red-400">*</span></label>
+                        <input type="date" id="expenseDate" required class="input-custom">
+                    </div>
+                    <div class="flex items-end gap-3 lg:col-span-2">
+                        <label class="flex items-center gap-2 cursor-pointer mb-2.5">
+                            <input type="checkbox" id="enableSplit"
+                                class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                            <span class="text-sm font-medium" data-theme-heading>แบ่งชำระหลายเดือน</span>
+                        </label>
+                        <div id="splitMonthsContainer" class="hidden flex-1">
+                            <select id="splitMonths" class="input-custom py-2">
+                                <option value="2">2 เดือน</option>
+                                <option value="3">3 เดือน</option>
+                                <option value="4">4 เดือน</option>
+                                <option value="5">5 เดือน</option>
+                                <option value="6">6 เดือน</option>
+                                <option value="12">12 เดือน</option>
+                                <option value="24">24 เดือน</option>
+                            </select>
+                        </div>
+                    </div>
+                    <!-- Preview Split -->
+                    <div id="splitPreview"
+                        class="hidden lg:col-span-4 bg-blue-50/50 rounded-xl p-4 border border-blue-100/50 mt-1">
+                        <div class="flex items-center gap-2 text-blue-700 font-bold text-sm mb-3">
+                            <i class="bi bi-eye"></i> ภาพรวมการแบ่งชำระ
+                            <span class="text-[11px] font-normal text-slate-500 ml-auto">
+                                <i class="bi bi-info-circle"></i>
+                                ระบบจะสร้างรายจ่ายล่วงหน้าให้ในวันเดียวกันของแต่ละเดือน
+                            </span>
+                        </div>
+                        <div id="previewList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            <!-- Items will be injected here -->
+                        </div>
+                    </div>
+                    <div class="sm:col-span-2 lg:col-span-4 mt-2">
+                        <button type="submit" id="submitBtn"
+                            class="btn-primary w-full sm:w-auto shadow-sm transform hover:scale-[1.02] active:scale-95 transition-all">
+                            บันทึกรายจ่าย
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Expense Table Section -->
+            <section class="card-custom overflow-hidden fade-in">
+                <div class="p-6 border-b border-inherit bg-slate-50/50 relative overflow-hidden">
+                    <h2 class="text-lg font-bold" data-theme-heading><i class="bi bi-list-task"></i> รายการทั้งหมด</h2>
+                    <!-- Top subtle progress bar -->
+                    <div id="tableLoadingBar"
+                        class="absolute bottom-0 left-0 h-0.5 bg-blue-500 w-0 transition-all duration-300 opacity-0">
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto p-0 no-scrollbar">
+                    <table class="w-full text-sm text-left border-collapse min-w-full">
+                        <thead class="bg-slate-800/40 border-b border-inherit" data-theme-muted>
+                            <!-- Header Row 1: Titles & Sorting -->
+                            <tr>
+                                <th
+                                    class="px-4 py-3 font-semibold uppercase tracking-wider text-[10px] w-12 text-center">
+                                    #</th>
+                                <th class="px-4 py-3 font-semibold uppercase tracking-wider text-[10px] cursor-pointer hover:text-blue-500 transition-colors group w-1/4"
+                                    onclick="changeSort('Title')">
+                                    รายการ <i class="bi bi-arrow-down-up ml-1 text-slate-400 group-hover:text-blue-500"
+                                        id="sort-Title"></i>
+                                </th>
+                                <th class="px-4 py-3 font-semibold uppercase tracking-wider text-[10px] cursor-pointer hover:text-blue-500 transition-colors group w-1/5"
+                                    onclick="changeSort('Amount')">
+                                    จำนวนเงิน <i
+                                        class="bi bi-arrow-down-up ml-1 text-slate-400 group-hover:text-blue-500"
+                                        id="sort-Amount"></i>
+                                </th>
+                                <th class="px-4 py-3 font-semibold uppercase tracking-wider text-[10px] cursor-pointer hover:text-blue-500 transition-colors group w-1/5"
+                                    onclick="changeSort('Category')">
+                                    หมวดหมู่ <i
+                                        class="bi bi-arrow-down-up ml-1 text-slate-400 group-hover:text-blue-500"
+                                        id="sort-Category"></i>
+                                </th>
+                                <th class="px-4 py-3 font-semibold uppercase tracking-wider text-[10px] cursor-pointer hover:text-blue-500 transition-colors group w-1/5"
+                                    onclick="changeSort('ExpenseDate')">
+                                    วันที่ <i class="bi bi-arrow-down-up ml-1 text-slate-400 group-hover:text-blue-500"
+                                        id="sort-ExpenseDate"></i>
+                                </th>
+                                <th
+                                    class="px-4 py-3 font-semibold uppercase tracking-wider text-[10px] text-center w-24">
+                                    จัดการ</th>
+                            </tr>
+                            <!-- Header Row 2: Inline Filters -->
+                            <tr class="bg-white/80 border-b border-inherit backdrop-blur-sm">
+                                <th class="px-3 py-1.5 text-center opacity-30"><i
+                                        class="bi bi-funnel-fill text-[10px]"></i></th>
+                                <th class="px-3 py-1.5">
+                                    <div class="relative">
+                                        <i
+                                            class="bi bi-search absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]"></i>
+                                        <input type="text" id="filterTitle" placeholder="ค้นหา..."
+                                            class="w-full bg-slate-50 border border-slate-200 rounded-md py-1 pl-7 pr-2 text-[10px] focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                                            oninput="handleFilterChange('search', this.value)">
+                                    </div>
+                                </th>
+                                <th class="px-3 py-1.5">
+                                    <div class="px-1 group relative">
+                                        <div class="flex justify-between text-[8px] text-slate-400 font-bold mb-0.5">
+                                            <span id="minAmountLabel" class="truncate max-w-[40px]">0</span>
+                                            <span id="maxAmountLabel" class="truncate max-w-[40px]">10k+</span>
+                                        </div>
+                                        <div class="relative h-4 flex items-center">
+                                            <input type="range" id="filterMinAmount" min="0" max="10000" value="0"
+                                                class="absolute w-full h-1 bg-transparent appearance-none pointer-events-none z-20 accent-blue-600"
+                                                oninput="handleMinAmountSlider(this.value)">
+                                            <input type="range" id="filterMaxAmount" min="0" max="10000" value="10000"
+                                                class="absolute w-full h-1 bg-slate-100 rounded-full appearance-none pointer-events-none z-10 accent-blue-600"
+                                                oninput="handleMaxAmountSlider(this.value)">
+                                        </div>
+                                    </div>
+                                </th>
+                                <th class="px-3 py-1.5 relative">
+                                    <div id="categoryContainer" class="flex flex-col">
+                                        <button onclick="window.toggleCategoryPopover(event)"
+                                            class="w-full bg-slate-50 border border-slate-200 rounded-md py-1 px-2 text-[10px] font-bold text-slate-600 hover:border-blue-400 flex items-center justify-between transition-all">
+                                            <span id="selectedCatText" class="truncate">หมวดหมู่</span>
+                                            <i class="bi bi-chevron-down text-[8px]"></i>
+                                        </button>
+
+                                        <!-- Category Popover -->
+                                        <div id="categoryPopover"
+                                            class="hidden absolute top-full left-0 mt-1 w-56 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 p-3 fade-in">
+                                            <div class="flex justify-between items-center mb-3">
+                                                <span
+                                                    class="text-[10px] font-black uppercase text-slate-400 tracking-wider">เลือกหมวดหมู่</span>
+                                                <div class="flex gap-2">
+                                                    <button onclick="window.bulkSelectCategories(true)"
+                                                        class="text-[9px] font-bold text-blue-600 hover:underline">ทั้งหมด</button>
+                                                    <button onclick="window.bulkSelectCategories(false)"
+                                                        class="text-[9px] font-bold text-red-500 hover:underline">ล้าง</button>
+                                                </div>
+                                            </div>
+                                            <div id="categoryList"
+                                                class="flex flex-col gap-1 max-h-48 overflow-y-auto pr-1 no-scrollbar">
+                                                <!-- Cat items injected here -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                </th>
+                                <th class="px-3 py-1.5">
+                                    <div class="flex items-center gap-1">
+                                        <input type="date" id="filterStartDate"
+                                            class="w-1/2 bg-slate-50 border border-slate-200 rounded-md py-0.5 px-1 text-[9px] outline-none focus:border-blue-400 transition-all font-medium"
+                                            onchange="handleFilterChange('startDate', this.value)">
+                                        <input type="date" id="filterEndDate"
+                                            class="w-1/2 bg-slate-50 border border-slate-200 rounded-md py-0.5 px-1 text-[9px] outline-none focus:border-blue-400 transition-all font-medium"
+                                            onchange="handleFilterChange('endDate', this.value)">
+                                    </div>
+                                </th>
+                                <th class="px-3 py-1.5 text-center">
+                                    <button onclick="resetFilters()"
+                                        class="text-[9px] font-black text-slate-400 hover:text-red-500 transition-colors uppercase flex items-center justify-center gap-1 mx-auto group">
+                                        <i
+                                            class="bi bi-arrow-counterclockwise group-hover:rotate-[-45deg] transition-transform"></i>
+                                        <span>ล้าง</span>
+                                    </button>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="expenseTableBody" class="divide-y divide-inherit">
+                            <!-- Dynamic rows -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Empty State -->
+                <div id="emptyState" class="hidden p-12 text-center" data-theme-muted>
+                    <i class="bi bi-inbox text-5xl mb-3 block opacity-30"></i>
+                    <p>ไม่พบข้อมูลที่ค้นหา</p>
+                </div>
+
+                <!-- Pagination Footer -->
+                <div
+                    class="px-6 py-4 border-t border-inherit bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div class="text-xs text-slate-500 font-medium">
+                        แสดง <span id="pageStart" class="text-slate-800 font-bold">0</span> ถึง <span id="pageEnd"
+                            class="text-slate-800 font-bold">0</span> จากทั้งหมด <span id="totalItems"
+                            class="text-slate-800 font-bold">0</span> รายการ
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="changePage(-1)" id="prevPage"
+                            class="p-2 rounded-lg border border-slate-200 hover:bg-white hover:shadow-sm disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                        <div id="pageNumbers" class="flex gap-1">
+                            <!-- Page numbers injected here -->
+                        </div>
+                        <button onclick="changePage(1)" id="nextPage"
+                            class="p-2 rounded-lg border border-slate-200 hover:bg-white hover:shadow-sm disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+
+        <!-- Toast Notification -->
+        <div id="toast"
+            class="fixed bottom-6 right-6 bg-emerald-600 text-white px-5 py-3 rounded-xl shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50 text-sm font-medium">
+        </div>
+
+
+        <div id="footer-container"></div>
+    </main>
+</body>
+
+</html>

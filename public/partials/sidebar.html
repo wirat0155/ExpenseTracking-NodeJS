@@ -1,0 +1,175 @@
+<link rel="stylesheet" href="/expense/assets/css/app.css">
+<link rel="stylesheet" href="/expense/assets/css/sidebar.css">
+<aside id="sidebar" class="sidebar flex flex-col h-full shadow-sm bg-white">
+    <!-- Header/Logo area -->
+    <div class="p-4 flex items-center justify-between border-b border-slate-100 mb-2">
+        <div class="flex items-center gap-3 logo-container transition-opacity duration-200">
+            <i class="bi bi-wallet2 text-2xl text-blue-600"></i>
+            <span class="font-bold text-blue-600 text-lg logo-text whitespace-nowrap">Expense App</span>
+        </div>
+        <button id="sidebarToggle" class="p-2 hover:bg-slate-100 rounded-lg transition-colors shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+            </svg>
+        </button>
+    </div>
+
+    <!-- Nav Links -->
+    <nav class="flex-1 px-3 space-y-1 overflow-y-auto no-scrollbar">
+        <a href="/expense/index.html" id="nav-home"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all group duration-200">
+            <i class="bi bi-house-door text-xl shrink-0"></i>
+            <span class="nav-text whitespace-nowrap opacity-100 transition-opacity duration-200">หน้าหลัก</span>
+        </a>
+        <a href="/expense/dashboard.html" id="nav-dashboard"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all group duration-200">
+            <i class="bi bi-grid-1x2 text-xl shrink-0"></i>
+            <span class="nav-text whitespace-nowrap opacity-100 transition-opacity duration-200">Dashboard</span>
+        </a>
+        <a href="/expense/calendar.html" id="nav-calendar"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all group duration-200">
+            <i class="bi bi-calendar3 text-xl shrink-0"></i>
+            <span class="nav-text whitespace-nowrap opacity-100 transition-opacity duration-200">ปฏิทิน</span>
+        </a>
+
+        <!-- Sidebar Budget Info -->
+        <div id="sidebarBudget"
+            class="mt-6 p-3 bg-slate-50 border border-slate-100 rounded-2xl mx-1 nav-text transition-all duration-300 opacity-0">
+            <p
+                class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center justify-between">
+                <span>Monthly Budget</span>
+                <i class="bi bi-info-circle"></i>
+            </p>
+            <div class="flex justify-between items-baseline mb-1">
+                <span id="sb-percent" class="text-xs font-black text-blue-600">0%</span>
+                <span id="sb-rem" class="text-[10px] font-bold text-slate-500">฿0 left</span>
+            </div>
+            <div class="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                <div id="sb-bar" class="bg-blue-600 h-full transition-all duration-1000" style="width: 0%"></div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Footer / Mobile Toggle -->
+    <div class="p-4 border-t border-slate-100 sm:hidden">
+        <button onclick="toggleMobileSidebar()"
+            class="w-full py-2 bg-slate-50 text-slate-500 rounded-lg text-sm font-medium">ปิดเมนู</button>
+    </div>
+</aside>
+
+<!-- Mobile Menu Button -->
+<div class="fixed top-4 left-4 z-50 sm:hidden">
+    <button onclick="toggleMobileSidebar()" class="p-2 bg-white shadow-md rounded-lg border border-slate-200">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24"
+            stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+    </button>
+</div>
+
+<script>
+    (function () {
+        const path = window.location.pathname;
+        const links = {
+            'index.html': 'nav-home',
+            'dashboard.html': 'nav-dashboard',
+            'calendar.html': 'nav-calendar',
+            '/expense/': 'nav-home'
+        };
+
+        const activeClass = 'bg-blue-600 text-white shadow-md shadow-blue-200';
+        const inactiveClass = 'text-slate-700 hover:bg-slate-50 hover:text-blue-600';
+
+        // 1. Identify active ID
+        let activeId = null;
+        for (const [key, id] of Object.entries(links)) {
+            if (path.endsWith(key) || (key === '/expense/' && (path === '/expense' || path === '/expense/'))) {
+                activeId = id;
+                break;
+            }
+        }
+
+        // 2. Apply classes
+        ['nav-home', 'nav-dashboard', 'nav-calendar'].forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (id === activeId) {
+                el.className += ' ' + activeClass;
+            } else {
+                el.className += ' ' + inactiveClass;
+            }
+        });
+
+        // Sidebar Collapse Logic
+        const sidebar = document.getElementById('sidebar');
+        const toggleBtn = document.getElementById('sidebarToggle');
+        const mainContent = document.querySelector('.main-content');
+
+        // Restore state
+        const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+        if (isCollapsed) {
+            sidebar.classList.add('collapsed');
+            if (mainContent) mainContent.classList.add('sidebar-collapsed');
+            updateToggleIcon(true);
+        }
+
+        toggleBtn.addEventListener('click', () => {
+            const collapsed = sidebar.classList.toggle('collapsed');
+            if (mainContent) mainContent.classList.toggle('sidebar-collapsed');
+            localStorage.setItem('sidebarCollapsed', collapsed);
+            updateToggleIcon(collapsed);
+        });
+
+        function updateToggleIcon(collapsed) {
+            toggleBtn.innerHTML = collapsed
+                ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>`
+                : `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>`;
+        }
+
+        // Sidebar Budget Integration
+        async function updateSidebarBudget() {
+            if (!window.API || !window.API.getBudget || !window.API.getDashboardSummary) return;
+            try {
+                const now = new Date();
+                const [budget, dash] = await Promise.all([
+                    window.API.getBudget(now.getFullYear(), now.getMonth() + 1),
+                    window.API.getDashboardSummary()
+                ]);
+
+                const spent = dash.currentMonthTotal;
+                const total = budget.amount;
+                const percent = total > 0 ? (spent / total * 100) : 0;
+                const remaining = total - spent;
+
+                const percentEl = document.getElementById('sb-percent');
+                const barEl = document.getElementById('sb-bar');
+                const remEl = document.getElementById('sb-rem');
+                const widgetEl = document.getElementById('sidebarBudget');
+
+                if (percentEl) percentEl.textContent = `${percent.toFixed(0)}%`;
+                if (barEl) {
+                    barEl.style.width = `${Math.min(percent, 100)}%`;
+                    barEl.className = percent >= 100 ? 'bg-red-500 h-full' : (percent >= 80 ? 'bg-amber-500 h-full' : 'bg-blue-600 h-full');
+                }
+                if (remEl) remEl.textContent = `฿${Math.max(0, remaining).toLocaleString()} left`;
+
+                // Show after calculation
+                if (widgetEl) widgetEl.classList.remove('opacity-0');
+
+            } catch (e) { console.warn('Sidebar budget error:', e); }
+        }
+
+        // Run once after a small delay to ensure API is ready
+        setTimeout(updateSidebarBudget, 500);
+        // Refresh every 30 seconds
+        setInterval(updateSidebarBudget, 30000);
+        // Refresh when any page adds or deletes an expense
+        window.addEventListener('expense:changed', updateSidebarBudget);
+    })();
+
+    function toggleMobileSidebar() {
+        document.getElementById('sidebar').classList.toggle('mobile-open');
+    }
+</script>

@@ -1,0 +1,35 @@
+/* Sidebar collapsed state styles */
+.sidebar.collapsed .logo-text,
+.sidebar.collapsed .nav-text {
+    display: none;
+}
+
+/* Additional fixes for collapsed state */
+.sidebar.collapsed .logo-container {
+    display: none;
+}
+
+.sidebar.collapsed .p-4.flex.justify-between {
+    justify-content: center !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+}
+
+.sidebar.collapsed nav a {
+    justify-content: center;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    aspect-ratio: 1;
+    /* Make it a square */
+    display: flex;
+    align-items: center;
+}
+
+.sidebar.collapsed nav a i {
+    margin: 0 !important;
+}
+
+.sidebar.collapsed #sidebarBudget {
+    display: none;
+    /* Hide budget widget in collapsed mode */
+}

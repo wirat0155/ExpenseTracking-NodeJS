@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📅 ปฏิทินรายจ่าย | Expense Tracker</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📅</text></svg>">
+    <meta name="description" content="ดูรายจ่ายในรูปแบบปฏิทินรายเดือน">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/expense/assets/css/app.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="/expense/assets/js/core/components.js"></script>
+    <script src="/expense/assets/js/core/utils.js"></script>
+    <script src="/expense/assets/js/core/api.js"></script>
+    <script src="/expense/assets/js/pages/calendar/calendar.js"></script>
+</head>
+
+<body class="min-h-screen">
+
+    <div id="sidebar-container"></div>
+
+    <main class="main-content">
+        <div class="max-w-5xl mx-auto w-full px-4 py-8 flex-1">
+            <!-- Breadcrumb -->
+            <nav class="breadcrumb fade-in">
+                <a href="/expense/index.html">Expense App</a>
+                <i class="bi bi-chevron-right"></i>
+                <span class="active">ปฏิทินรายจ่าย</span>
+            </nav>
+
+            <!-- Header + Month Nav -->
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-8 fade-in">
+                <div>
+                    <h1 class="text-3xl font-bold text-blue-600 inline-block pb-1">
+                        <i class="bi bi-calendar3 text-blue-600"></i> ปฏิทินรายจ่าย
+                    </h1>
+                    <p id="monthLabel" class="mt-2 text-sm font-medium text-slate-500">—</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="prevBtn" onclick="changeMonth(-1)"
+                        class="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl text-sm font-semibold text-slate-700 transition-all shadow-sm">
+                        ← ก่อนหน้า
+                    </button>
+                    <button id="todayBtn" onclick="goToday()"
+                        class="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl text-sm font-semibold transition-all shadow-sm">
+                        วันนี้
+                    </button>
+                    <button id="nextBtn" onclick="changeMonth(1)"
+                        class="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl text-sm font-semibold text-slate-700 transition-all shadow-sm">
+                        ถัดไป →
+                    </button>
+                </div>
+            </div>
+
+            <!-- Month Summary Bar -->
+            <div id="monthSummaryBar" class="card-custom px-6 py-5 mb-6 fade-in flex flex-wrap gap-8 items-center">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider mb-1" data-theme-muted>ยอดรวมเดือนนี้</p>
+                    <p id="barTotal" class="text-2xl font-bold" data-theme-accent1>—</p>
+                </div>
+                <div class="w-px h-10 bg-inherit opacity-20 hidden sm:block"></div>
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider mb-1" data-theme-muted>จำนวนวันที่มีรายจ่าย
+                    </p>
+                    <p id="barDays" class="text-2xl font-bold" data-theme-accent2>—</p>
+                </div>
+                <div class="w-px h-10 bg-inherit opacity-20 hidden sm:block"></div>
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider mb-1" data-theme-muted>จำนวนรายการ</p>
+                    <p id="barItems" class="text-2xl font-bold" data-theme-accent3>—</p>
+                </div>
+            </div>
+
+            <!-- Calendar Grid -->
+            <div class="card-custom overflow-hidden fade-in">
+
+                <!-- Day headers -->
+                <div class="grid grid-cols-7 border-b border-inherit bg-slate-800/40">
+                    <div class="py-3 text-center text-xs font-semibold text-red-500">อา</div>
+                    <div class="py-3 text-center text-xs font-semibold" data-theme-muted>จ</div>
+                    <div class="py-3 text-center text-xs font-semibold" data-theme-muted>อ</div>
+                    <div class="py-3 text-center text-xs font-semibold" data-theme-muted>พ</div>
+                    <div class="py-3 text-center text-xs font-semibold" data-theme-muted>พฤ</div>
+                    <div class="py-3 text-center text-xs font-semibold" data-theme-muted>ศ</div>
+                    <div class="py-3 text-center text-xs font-semibold text-blue-500">ส</div>
+                </div>
+
+                <!-- Calendar cells -->
+                <div id="calendarGrid" class="grid grid-cols-7 bg-inherit">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- Loading / Empty state -->
+            <div id="loadingState" class="text-center py-12 hidden" data-theme-muted>
+                <p class="text-3xl mb-3">⏳</p>
+                <p class="font-medium">กำลังโหลด...</p>
+            </div>
+
+        </div>
+
+        <!-- Day Details Popover (Floating) -->
+        <div id="dayPopover" class="fixed z-40 invisible opacity-0 transition-all duration-200 pointer-events-none">
+            <div
+                class="card-custom min-w-[300px] max-w-[90vw] bg-white shadow-xl border border-blue-100 p-0 pointer-events-auto transform transition-transform duration-200">
+                <div id="popoverContent"></div>
+                <!-- Arrow tips -->
+                <div id="popoverArrowTop"
+                    class="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-t border-l border-blue-100 rotate-45">
+                </div>
+                <div id="popoverArrowBottom"
+                    class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-b border-r border-blue-100 rotate-45 hidden">
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Expense Modal -->
+        <div id="addModal"
+            class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 invisible opacity-0 transition-all duration-300">
+            <div class="card-custom w-full max-w-lg p-6 scale-95 transition-transform duration-300" id="modalContent">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-blue-600"><i class="bi bi-plus-circle"></i> เพิ่มรายจ่าย</h2>
+                    <button onclick="closeAddModal()"
+                        class="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+                </div>
+                <form id="expenseForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm mb-1.5 font-medium text-slate-700">รายการ <span
+                                class="text-red-500">*</span></label>
+                        <input type="text" id="title" required placeholder="เช่น ค่ากาแฟ" class="input-custom">
+                    </div>
+                    <div>
+                        <label class="block text-sm mb-1.5 font-medium text-slate-700">จำนวนเงิน <span
+                                class="text-red-500">*</span></label>
+                        <input type="number" id="amount" required min="0.01" step="0.01" placeholder="0.00"
+                            class="input-custom">
+                    </div>
+                    <div>
+                        <label class="block text-sm mb-1.5 font-medium text-slate-700">หมวดหมู่ <span
+                                class="text-red-500">*</span></label>
+                        <select id="category" required class="input-custom">
+                            <option value="">-- เลือกหมวดหมู่ --</option>
+                            <option value="อาหารและเครื่องดื่ม">🍔 อาหารและเครื่องดื่ม</option>
+                            <option value="การเดินทาง">🚗 การเดินทาง</option>
+                            <option value="สาธารณูปโภค">💡 สาธารณูปโภค</option>
+                            <option value="การศึกษา">📚 การศึกษา</option>
+                            <option value="สุขภาพ">🏥 สุขภาพ</option>
+                            <option value="ความบันเทิง">🎮 ความบันเทิง</option>
+                            <option value="อื่นๆ">📦 อื่นๆ</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm mb-1.5 font-medium text-slate-700">วันที่ <span
+                                class="text-red-500">*</span></label>
+                        <input type="date" id="expenseDate" required class="input-custom">
+                    </div>
+                    <div class="flex items-center gap-2 mt-2">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="enableSplit"
+                                class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                            <span class="text-sm font-medium text-slate-700">แบ่งชำระหลายเดือน</span>
+                        </label>
+                        <div id="splitMonthsContainer" class="hidden flex-1">
+                            <select id="splitMonths" class="input-custom py-1.5 text-xs">
+                                <option value="2">2 เดือน</option>
+                                <option value="3">3 เดือน</option>
+                                <option value="4">4 เดือน</option>
+                                <option value="5">5 เดือน</option>
+                                <option value="6">6 เดือน</option>
+                                <option value="12">12 เดือน</option>
+                                <option value="24">24 เดือน</option>
+                            </select>
+                        </div>
+                    </div>
+                    <!-- Preview Split -->
+                    <div id="splitPreview" class="hidden bg-blue-50/50 rounded-xl p-3 border border-blue-100/50 mt-1">
+                        <div class="flex items-center gap-2 text-blue-700 font-bold text-xs mb-2">
+                            <i class="bi bi-eye"></i> ภาพรวม
+                            <span class="text-[10px] font-normal text-slate-500 ml-auto">
+                                <i class="bi bi-info-circle"></i> แบ่งรายเดือนละเท่าๆ กัน
+                            </span>
+                        </div>
+                        <div id="previewList" class="space-y-1.5 max-h-[120px] overflow-y-auto no-scrollbar">
+                            <!-- Items will be injected here -->
+                        </div>
+                    </div>
+                    <div class="pt-4 flex gap-3">
+                        <button type="button" onclick="closeAddModal()"
+                            class="flex-1 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition-all">ยกเลิก</button>
+                        <button type="submit" id="submitBtn" class="flex-1 btn-primary">บันทึกรายจ่าย</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Toast -->
+        <div id="toast"
+            class="fixed bottom-6 right-6 bg-red-600 text-white px-5 py-3 rounded-xl shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50 text-sm font-medium">
+        </div>
+
+
+        <div id="footer-container"></div>
+    </main>
+</body>
+
+</html>

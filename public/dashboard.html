@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 Dashboard | Expense Tracker</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
+    <meta name="description" content="สรุปภาพรวมรายจ่ายทั้งหมด">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/expense/assets/css/app.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="/expense/assets/js/core/components.js"></script>
+    <script src="/expense/assets/js/core/utils.js"></script>
+    <script src="/expense/assets/js/core/api.js"></script>
+    <script src="/expense/assets/js/pages/dashboard/dashboard.js"></script>
+</head>
+
+<body class="min-h-screen">
+
+    <div id="sidebar-container"></div>
+
+    <main class="main-content">
+        <div class="max-w-5xl mx-auto w-full px-4 py-8 flex-1">
+            <!-- Breadcrumb -->
+            <nav class="breadcrumb fade-in">
+                <a href="/expense/index.html">Expense App</a>
+                <i class="bi bi-chevron-right"></i>
+                <span class="active">Dashboard</span>
+            </nav>
+
+            <!-- Header -->
+            <header class="mb-8 fade-in">
+                <h1 class="text-3xl font-bold text-blue-600 inline-block pb-1">
+                    <i class="bi bi-grid-1x2 text-blue-600"></i> Dashboard
+                </h1>
+                <p class="mt-2 text-sm font-medium text-slate-500">ภาพรวมสถานะการเงินและสถิติรายจ่ายของคุณ</p>
+            </header>
+
+            <!-- Summary Cards -->
+            <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 fade-in">
+                <div class="card-custom p-6">
+                    <p class="text-xs font-semibold uppercase tracking-wider mb-2" data-theme-muted>ยอดรวมทั้งหมด</p>
+                    <p id="totalExpense" class="text-3xl font-bold" text-blue-600>—</p>
+                    <p class="text-xs mt-1 font-medium" data-theme-muted>ทุกรายการ</p>
+                </div>
+                <div class="card-custom p-6">
+                    <p class="text-xs font-semibold uppercase tracking-wider mb-2" data-theme-muted>เดือนนี้</p>
+                    <p id="currentMonthTotal" class="text-3xl font-bold" text-blue-600>—</p>
+                    <p id="currentMonthLabel" class="text-xs mt-1 font-medium" data-theme-muted>—</p>
+                </div>
+                <div class="card-custom p-6">
+                    <p class="text-xs font-semibold uppercase tracking-wider mb-2" data-theme-muted>หมวดหมู่</p>
+                    <p id="categoryCount" class="text-3xl font-bold" text-blue-600>—</p>
+                    <p class="text-xs mt-1 font-medium" data-theme-muted>ประเภทรายจ่าย</p>
+                </div>
+                <div class="card-custom p-6">
+                    <p class="text-xs font-semibold uppercase tracking-wider mb-2" data-theme-muted>เดือนที่บันทึก</p>
+                    <p id="monthCount" class="text-3xl font-bold" text-blue-600>—</p>
+                    <p class="text-xs mt-1 font-medium" data-theme-muted>เดือนที่มีรายจ่าย</p>
+                </div>
+                <!-- Budget Card -->
+                <div
+                    class="card-custom p-6 col-span-1 sm:col-span-2 lg:col-span-4 bg-gradient-to-br from-white to-slate-50/50">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1">
+                                สถานะงบประมาณรายเดือน (Monthly Budget)</h3>
+                            <p class="text-xs text-slate-400 font-medium">
+                                เปรียบเทียบค่าใช้จ่ายกับงบที่ตั้งไว้สำหรับเดือนนี้</p>
+                        </div>
+                        <button onclick="window.openBudgetModal()"
+                            class="btn-primary py-1.5 px-3 text-xs flex items-center gap-2 self-start sm:self-auto">
+                            <i class="bi bi-gear-fill"></i> ตั้งค่า Budget
+                        </button>
+                    </div>
+
+                    <div class="flex items-end justify-between mb-2">
+                        <div class="flex items-baseline gap-2">
+                            <span id="budgetSpent" class="text-2xl font-black text-slate-800">฿0</span>
+                            <span class="text-slate-400 text-sm font-bold">/ <span id="budgetTotal">฿0</span></span>
+                        </div>
+                        <div id="budgetPercentText"
+                            class="text-sm font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg">0%</div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div
+                        class="w-full bg-slate-200/50 rounded-full h-4 overflow-hidden shadow-inner p-1 backdrop-blur-sm border border-white/40">
+                        <div id="budgetProgressBar"
+                            class="h-full rounded-full transition-all duration-1000 ease-out shadow-sm"
+                            style="width: 0%"></div>
+                    </div>
+                    <div
+                        class="flex justify-between mt-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        <span>ใช้ไปแล้ว</span>
+                        <span id="budgetRemainingText">คงเหลือ: ฿0</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Budget Modal Container -->
+            <div id="budget-modal-container"></div>
+
+            <!-- 2-column layout -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+
+                <!-- Category Summary -->
+                <div class="card-custom p-7 fade-in">
+                    <h2 class="text-lg font-bold mb-5" text-blue-600><i class="bi bi-tags"></i> รายจ่ายตามหมวดหมู่</h2>
+                    <div id="categoryList" class="space-y-4">
+                        <p class="text-sm" data-theme-muted>กำลังโหลด...</p>
+                    </div>
+                </div>
+
+                <!-- Latest Expenses -->
+                <div class="card-custom p-7 fade-in">
+                    <h2 class="text-lg font-bold mb-5" text-blue-600><i class="bi bi-clock-history"></i> รายการล่าสุด 5
+                        รายการ</h2>
+                    <div id="latestList" class="space-y-3">
+                        <p class="text-sm" data-theme-muted>กำลังโหลด...</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Monthly Summary Table -->
+            <div class="card-custom overflow-hidden fade-in">
+                <div class="p-6 pb-4 border-b border-inherit">
+                    <h2 class="text-lg font-bold" text-blue-600><i class="bi bi-calendar3"></i> สรุปรายเดือน</h2>
+                </div>
+                <div class="overflow-x-auto p-0">
+                    <table class="w-full text-sm">
+                        <thead class="border-b border-inherit bg-slate-800/40" data-theme-muted>
+                            <tr>
+                                <th class="px-6 py-4 text-left font-semibold uppercase tracking-wider text-xs">ปี</th>
+                                <th class="px-6 py-4 text-left font-semibold uppercase tracking-wider text-xs">เดือน
+                                </th>
+                                <th class="px-6 py-4 text-left font-semibold uppercase tracking-wider text-xs">
+                                    จำนวนรายการ
+                                </th>
+                                <th class="px-6 py-4 text-right font-semibold uppercase tracking-wider text-xs">ยอดรวม
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="monthlyTableBody" class="divide-y divide-inherit">
+                            <tr>
+                                <td colspan="4" class="px-6 py-8 text-center" data-theme-muted>กำลังโหลด...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Toast -->
+        <div id="toast"
+            class="fixed bottom-6 right-6 bg-red-600 text-white px-5 py-3 rounded-xl shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50 text-sm font-medium">
+        </div>
+
+
+        <div id="footer-container"></div>
+    </main>
+</body>
+
+</html>

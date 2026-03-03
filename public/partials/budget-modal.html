@@ -1,0 +1,71 @@
+<!-- Budget Modal -->
+<div id="budgetModal"
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 invisible opacity-0 transition-all duration-300 backdrop-blur-sm">
+    <div class="card-custom w-full max-w-md p-7 scale-95 transition-transform duration-300" id="budgetModalContent">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-bold text-blue-600 flex items-center gap-2">
+                <i class="bi bi-piggy-bank text-2xl"></i> ตั้งค่างบประมาณ
+            </h2>
+            <button onclick="window.closeBudgetModal()"
+                class="text-slate-400 hover:text-red-500 text-2xl transition-colors">&times;</button>
+        </div>
+
+        <div class="space-y-6">
+            <!-- Master Budget -->
+            <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">งบประมาณเริ่มต้น
+                    (Default Budget)</label>
+                <div class="relative">
+                    <span
+                        class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold pointer-events-none">฿</span>
+                    <input type="number" id="masterBudgetInput" class="input-custom font-bold w-full" placeholder="5000"
+                        style="padding-left: 2.2rem;">
+                </div>
+                <p class="mt-2 text-[10px] text-slate-400 font-medium">
+                    ค่างบประมาณอัตโนมัติสำหรับทุกเดือนที่ไม่ได้กำหนดเอง</p>
+                <button onclick="window.saveMasterBudget()"
+                    class="w-full mt-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition-all shadow-sm">
+                    บันทึก Budget เริ่มต้น
+                </button>
+            </div>
+
+            <div class="relative flex items-center py-2">
+                <div class="flex-grow border-t border-slate-200"></div>
+                <span
+                    class="flex-shrink mx-4 text-[10px] font-black text-slate-300 uppercase tracking-widest">หรือกำหนดเฉพาะเดือน</span>
+                <div class="flex-grow border-t border-slate-200"></div>
+            </div>
+
+            <!-- Specific Month Budget -->
+            <div class="p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50">
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                        <label class="block text-xs font-bold text-blue-600/70 uppercase tracking-wider mb-1.5">ปี
+                            (ค.ศ.)</label>
+                        <input type="number" id="budgetYear" class="input-custom py-2 text-sm w-full" value="2026">
+                    </div>
+                    <div>
+                        <label
+                            class="block text-xs font-bold text-blue-600/70 uppercase tracking-wider mb-1.5">เดือน</label>
+                        <select id="budgetMonth" class="input-custom py-2 text-sm w-full">
+                            <!-- Months populated by JS -->
+                        </select>
+                    </div>
+                </div>
+                <label
+                    class="block text-xs font-bold text-blue-600/70 uppercase tracking-wider mb-1.5">งบประมาณเฉพาะเดือนนี้</label>
+                <div class="relative">
+                    <span
+                        class="absolute left-3 top-1/2 -translate-y-1/2 text-blue-400 font-bold pointer-events-none">฿</span>
+                    <input type="number" id="monthlyBudgetInput"
+                        class="input-custom py-2.5 border-blue-200 focus:ring-blue-500 font-bold w-full"
+                        placeholder="0.00" style="padding-left: 2.2rem;">
+                </div>
+                <button onclick="window.saveMonthlyBudget()"
+                    class="w-full mt-4 btn-primary py-2.5 text-xs font-black shadow-blue-200">
+                    ยืนยันงบประมาณประจำเดือน
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
