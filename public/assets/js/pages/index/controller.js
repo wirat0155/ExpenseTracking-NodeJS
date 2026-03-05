@@ -11,10 +11,30 @@
     let expenseForm, expenseDate, enableSplit, splitMonthsContainer, splitPreview, previewList;
     let filterTimeout;
 
+    function showTableSkeletons() {
+        const tbody = document.getElementById('expenseTableBody');
+        if (!tbody) return;
+        tbody.innerHTML = Array(5).fill(0).map((_, i) => `
+            <tr class="transition-colors duration-150 even:bg-slate-50/50">
+                <td class="px-4 py-3 text-center"><div class="skeleton w-5 h-4 mx-auto"></div></td>
+                <td class="px-4 py-3"><div class="skeleton skeleton-text w-28 h-4"></div></td>
+                <td class="px-4 py-3"><div class="skeleton skeleton-text w-20 h-4"></div></td>
+                <td class="px-4 py-3"><div class="skeleton w-16 h-5 rounded-full"></div></td>
+                <td class="px-4 py-3"><div class="skeleton skeleton-text w-24 h-4"></div></td>
+                <td class="px-4 py-3 text-center"><div class="skeleton w-8 h-6 rounded-md mx-auto"></div></td>
+            </tr>
+        `).join('');
+        document.getElementById('emptyState').classList.add('hidden');
+    }
+
     async function loadExpenses() {
         ui.setLoadingState(true);
+        showTableSkeletons();
         try {
-            const res = await getExpenses(state);
+            const [res] = await Promise.all([
+                getExpenses(state),
+                new Promise(r => setTimeout(r, 500))
+            ]);
             state.totalPages = res.totalPages;
             state.totalItems = res.totalCount;
 
@@ -29,9 +49,20 @@
         }
     }
 
+    function showSummarySkeletons() {
+        ['totalCount', 'totalAmount'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = `<div class="skeleton skeleton-text w-24 h-8 mx-auto mt-1"></div>`;
+        });
+    }
+
     async function loadSummaryData() {
+        showSummarySkeletons();
         try {
-            const data = await getSummary();
+            const [data] = await Promise.all([
+                getSummary(),
+                new Promise(r => setTimeout(r, 500))
+            ]);
             document.getElementById('totalCount').textContent = data.totalCount.toLocaleString();
             document.getElementById('totalAmount').textContent = fmt(data.totalAmount);
 

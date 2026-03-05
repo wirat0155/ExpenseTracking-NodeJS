@@ -67,7 +67,10 @@
         `).join('');
 
         try {
-            const data = await getDashboardSummary();
+            const [data] = await Promise.all([
+                getDashboardSummary(),
+                new Promise(r => setTimeout(r, 500))
+            ]);
 
             // Summary cards
             document.getElementById('totalExpense').textContent = fmt(data.totalExpense);

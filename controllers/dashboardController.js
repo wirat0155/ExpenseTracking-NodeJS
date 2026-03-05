@@ -8,59 +8,73 @@ exports.getDashboardSummary = async (req, res) => {
         const now = new Date();
         const year = now.getFullYear();
         const month = now.getMonth() + 1;
+        const userId = req.userId;
 
         const [totalResult, currentMonthResult, categoryResult, monthlyResult, latestResult, budgetResult] =
             await Promise.all([
-                // Total expense overall
-                pool.request().query(`
-                    SELECT ISNULL(SUM(Amount), 0) AS totalExpense FROM Expenses
-                `),
+                // Total expense overall for current user
+                pool.request()
+                    .input('userId', sql.UniqueIdentifier, userId)
+                    .query(`
+                        SELECT ISNULL(SUM(Amount), 0) AS totalExpense FROM Expenses WHERE UserId = @userId
+                    `),
 
-                // Current month total
+                // Current month total for current user
                 pool.request()
                     .input('year', sql.Int, year)
                     .input('month', sql.Int, month)
+                    .input('userId', sql.UniqueIdentifier, userId)
                     .query(`
                         SELECT ISNULL(SUM(Amount), 0) AS currentMonthTotal
                         FROM Expenses
-                        WHERE YEAR(ExpenseDate) = @year AND MONTH(ExpenseDate) = @month
+                        WHERE YEAR(ExpenseDate) = @year AND MONTH(ExpenseDate) = @month AND UserId = @userId
                     `),
 
-                // Expense by category
-                pool.request().query(`
-                    SELECT Category AS category, ISNULL(SUM(Amount), 0) AS total
-                    FROM Expenses
-                    GROUP BY Category
-                    ORDER BY total DESC
-                `),
+                // Expense by category for current user
+                pool.request()
+                    .input('userId', sql.UniqueIdentifier, userId)
+                    .query(`
+                        SELECT Category AS category, ISNULL(SUM(Amount), 0) AS total
+                        FROM Expenses
+                        WHERE UserId = @userId
+                        GROUP BY Category
+                        ORDER BY total DESC
+                    `),
 
-                // Monthly summary
-                pool.request().query(`
-                    SELECT
-                        YEAR(ExpenseDate)  AS year,
-                        MONTH(ExpenseDate) AS month,
-                        ISNULL(SUM(Amount), 0) AS total,
-                        COUNT(*) AS count
-                    FROM Expenses
-                    GROUP BY YEAR(ExpenseDate), MONTH(ExpenseDate)
-                    ORDER BY year DESC, month DESC
-                `),
+                // Monthly summary for current user
+                pool.request()
+                    .input('userId', sql.UniqueIdentifier, userId)
+                    .query(`
+                        SELECT
+                            YEAR(ExpenseDate)  AS year,
+                            MONTH(ExpenseDate) AS month,
+                            ISNULL(SUM(Amount), 0) AS total,
+                            COUNT(*) AS count
+                        FROM Expenses
+                        WHERE UserId = @userId
+                        GROUP BY YEAR(ExpenseDate), MONTH(ExpenseDate)
+                        ORDER BY year DESC, month DESC
+                    `),
 
-                // Latest 5 expenses
-                pool.request().query(`
-                    SELECT TOP 5 Id, Title, Amount, Category, ExpenseDate
-                    FROM Expenses
-                    ORDER BY ExpenseDate DESC, Id DESC
-                `),
+                // Latest 5 expenses for current user
+                pool.request()
+                    .input('userId', sql.UniqueIdentifier, userId)
+                    .query(`
+                        SELECT TOP 5 Id, Title, Amount, Category, ExpenseDate
+                        FROM Expenses
+                        WHERE UserId = @userId
+                        ORDER BY ExpenseDate DESC, Id DESC
+                    `),
 
-                // Current month budget (with fallback to master)
+                // Current month budget for current user (with fallback to master)
                 pool.request()
                     .input('year', sql.Int, year)
                     .input('month', sql.Int, month)
+                    .input('userId', sql.UniqueIdentifier, userId)
                     .query(`
-                        SELECT TOP 1 Amount FROM Budgets WHERE [Year] = @year AND [Month] = @month
+                        SELECT TOP 1 Amount FROM Budgets WHERE [Year] = @year AND [Month] = @month AND UserId = @userId
                         UNION ALL
-                        SELECT CAST([Value] AS DECIMAL(18,2)) FROM Settings WHERE [Key] = 'MasterBudget'
+                        SELECT CAST([Value] AS DECIMAL(18,2)) FROM Settings WHERE [Key] = 'MasterBudget' AND UserId = @userId
                     `)
             ]);
 

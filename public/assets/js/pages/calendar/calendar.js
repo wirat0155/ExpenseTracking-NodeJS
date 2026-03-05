@@ -235,16 +235,48 @@
         }
     });
 
+    function showCalendarSkeletons() {
+        // Skeleton for summary bar stats
+        ['barTotal', 'barDays', 'barItems'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = `<div class="skeleton skeleton-text w-24 h-8 mt-1"></div>`;
+        });
+
+        // Skeleton for month label
+        const monthLabel = document.getElementById('monthLabel');
+        if (monthLabel) monthLabel.innerHTML = `<div class="skeleton skeleton-text w-32 h-4"></div>`;
+
+        // Skeleton for calendar grid cells
+        const grid = document.getElementById('calendarGrid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        // Show 35 skeleton cells (5 rows × 7 cols)
+        for (let i = 0; i < 35; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'day-cell min-h-[100px] border-b border-r border-inherit p-2 flex flex-col gap-2';
+            cell.innerHTML = `
+                <div class="skeleton w-7 h-7 rounded-full"></div>
+                <div class="skeleton skeleton-text w-16 h-3 mt-auto"></div>
+                <div class="skeleton skeleton-text w-12 h-2"></div>
+            `;
+            grid.appendChild(cell);
+        }
+    }
+
     async function loadCalendar() {
         openDay = null;
         const grid = document.getElementById('calendarGrid');
         if (!grid) return;
-        grid.innerHTML = '';
-        const loading = document.getElementById('loadingState');
-        if (loading) loading.classList.remove('hidden');
+
+        // Show skeleton loaders
+        showCalendarSkeletons();
 
         try {
-            const raw = await getCalendarData(currentYear, currentMonth);
+            const [raw] = await Promise.all([
+                getCalendarData(currentYear, currentMonth),
+                new Promise(r => setTimeout(r, 500))
+            ]);
             calendarData = {};
             let monthTotal = 0, itemCount = 0;
             raw.forEach(d => {
@@ -261,8 +293,6 @@
             renderCalendar();
         } catch (err) {
             error('โหลดข้อมูลล้มเหลว: ' + err.message);
-        } finally {
-            if (loading) loading.classList.add('hidden');
         }
     }
 

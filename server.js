@@ -3,6 +3,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const authMiddleware = require('./middleware/auth');
+const authRoutes = require('./routes/auth');
 const expenseRoutes = require('./routes/expenses');
 const dashboardRoutes = require('./routes/dashboard');
 const budgetRoutes = require('./routes/budgets');
@@ -20,10 +22,13 @@ app.get('/', (req, res) => {
     res.redirect('/expense/');
 });
 
-// Routes
-app.use('/api/expenses', expenseRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/budgets', budgetRoutes);
+// Public Routes (no auth required)
+app.use('/api/auth', authRoutes);
+
+// Protected Routes (require valid JWT)
+app.use('/api/expenses', authMiddleware, expenseRoutes);
+app.use('/api/dashboard', authMiddleware, dashboardRoutes);
+app.use('/api/budgets', authMiddleware, budgetRoutes);
 
 // Start server
 const initializeDatabase = require('./db/autoInit');

@@ -17,9 +17,10 @@ exports.getExpenses = async (req, res) => {
         const offset = (parseInt(page) - 1) * parseInt(limit);
         const rowsLimit = parseInt(limit);
 
-        // Build base WHERE clause
-        let whereClauses = [];
+        // Build base WHERE clause — always filter by current user
+        let whereClauses = ['UserId = @userId'];
         const request = pool.request();
+        request.input('userId', sql.UniqueIdentifier, req.userId);
 
         if (startDate) {
             whereClauses.push('ExpenseDate >= @startDate');
@@ -42,7 +43,6 @@ exports.getExpenses = async (req, res) => {
         if (categories && categories.length > 0) {
             const catArray = categories.split(',').filter(c => c.trim() !== '');
             if (catArray.length > 0) {
-                // Since fixed parameter count for IN is tricky, we'll build it carefully
                 const catClauses = [];
                 catArray.forEach((cat, i) => {
                     const paramName = `cat_${i}`;
@@ -58,7 +58,7 @@ exports.getExpenses = async (req, res) => {
             request.input('search', sql.NVarChar, `%${search}%`);
         }
 
-        const whereStr = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+        const whereStr = `WHERE ${whereClauses.join(' AND ')}`;
 
         // Validate Sort Columns to prevent SQL Injection
         const validSortCols = ['Title', 'Amount', 'Category', 'ExpenseDate', 'CreatedAt'];
@@ -115,7 +115,6 @@ exports.createExpense = async (req, res) => {
         await transaction.begin();
 
         const results = [];
-        // const request = new sql.Request(transaction); // This request object is not used for single expense, it's created inline
 
         // Handle Distributed Expense (Split Months)
         if (splitMonths && splitMonths > 1) {
@@ -127,17 +126,13 @@ exports.createExpense = async (req, res) => {
 
             for (let i = 1; i <= months; i++) {
                 const targetMonth = baseDate.getMonth() + (i - 1);
-                // Create a date for the first of the target month
                 const date = new Date(baseDate.getFullYear(), targetMonth, 1);
-                // Find the last day of this target month
                 const lastDayInMonth = new Date(baseDate.getFullYear(), targetMonth + 1, 0).getDate();
-                // Use the minimum of baseDay or lastDayInMonth
                 date.setDate(Math.min(baseDay, lastDayInMonth));
 
                 const formattedDate = date.toISOString().slice(0, 10);
                 const fullTitle = `${title} งวดที่ ${i}/${months}`;
 
-                // Create a fresh request for each inner query in the transaction
                 const innerReq = new sql.Request(transaction);
                 const result = await innerReq
                     .input('title', sql.NVarChar(255), fullTitle)
@@ -145,24 +140,26 @@ exports.createExpense = async (req, res) => {
                     .input('category', sql.NVarChar(100), category)
                     .input('expenseDate', sql.Date, formattedDate)
                     .input('groupId', sql.UniqueIdentifier, groupId)
-                    .query(`INSERT INTO Expenses (Title, Amount, Category, ExpenseDate, GroupId)
+                    .input('userId', sql.UniqueIdentifier, req.userId)
+                    .query(`INSERT INTO Expenses (Title, Amount, Category, ExpenseDate, GroupId, UserId)
                             OUTPUT INSERTED.*
-                            VALUES (@title, @amount, @category, @expenseDate, @groupId)`);
+                            VALUES (@title, @amount, @category, @expenseDate, @groupId, @userId)`);
                 results.push(result.recordset[0]);
             }
             await transaction.commit();
             return res.status(201).json(results);
         } else {
             // Normal Single Expense
-            const request = new sql.Request(transaction); // Create request for single expense
+            const request = new sql.Request(transaction);
             const result = await request
                 .input('title', sql.NVarChar(255), title)
                 .input('amount', sql.Decimal(18, 2), numAmount)
                 .input('category', sql.NVarChar(100), category)
                 .input('expenseDate', sql.Date, expenseDate)
-                .query(`INSERT INTO Expenses (Title, Amount, Category, ExpenseDate)
+                .input('userId', sql.UniqueIdentifier, req.userId)
+                .query(`INSERT INTO Expenses (Title, Amount, Category, ExpenseDate, UserId)
                         OUTPUT INSERTED.*
-                        VALUES (@title, @amount, @category, @expenseDate)`);
+                        VALUES (@title, @amount, @category, @expenseDate, @userId)`);
 
             await transaction.commit();
             return res.status(201).json(result.recordset[0]);
@@ -186,10 +183,11 @@ exports.deleteExpense = async (req, res) => {
 
         const request = new sql.Request(transaction);
 
-        // 1. Check if this expense belongs to a group
+        // 1. Check if this expense belongs to the current user
         const checkResult = await request
             .input('id', sql.UniqueIdentifier, id)
-            .query('SELECT GroupId FROM Expenses WHERE Id = @id');
+            .input('userId', sql.UniqueIdentifier, req.userId)
+            .query('SELECT GroupId FROM Expenses WHERE Id = @id AND UserId = @userId');
 
         if (checkResult.recordset.length === 0) {
             await transaction.rollback();
@@ -199,17 +197,19 @@ exports.deleteExpense = async (req, res) => {
         const groupId = checkResult.recordset[0].GroupId;
 
         if (groupId) {
-            // 2. Delete the whole group
+            // 2. Delete the whole group (only for this user)
             const deleteReq = new sql.Request(transaction);
             await deleteReq
                 .input('groupId', sql.UniqueIdentifier, groupId)
-                .query('DELETE FROM Expenses WHERE GroupId = @groupId');
+                .input('userId', sql.UniqueIdentifier, req.userId)
+                .query('DELETE FROM Expenses WHERE GroupId = @groupId AND UserId = @userId');
         } else {
             // 3. Just delete the single expense
             const deleteReq = new sql.Request(transaction);
             await deleteReq
                 .input('id', sql.UniqueIdentifier, id)
-                .query('DELETE FROM Expenses WHERE Id = @id');
+                .input('userId', sql.UniqueIdentifier, req.userId)
+                .query('DELETE FROM Expenses WHERE Id = @id AND UserId = @userId');
         }
 
         await transaction.commit();
@@ -232,14 +232,15 @@ exports.getCalendar = async (req, res) => {
             return res.status(400).json({ error: 'Invalid year or month' });
         }
 
-        // Fetch all expenses for the given month
+        // Fetch all expenses for the given month for the current user
         const result = await pool.request()
             .input('year', sql.Int, year)
             .input('month', sql.Int, month)
+            .input('userId', sql.UniqueIdentifier, req.userId)
             .query(`
                 SELECT Id, Title, Amount, Category, ExpenseDate
                 FROM Expenses
-                WHERE YEAR(ExpenseDate) = @year AND MONTH(ExpenseDate) = @month
+                WHERE YEAR(ExpenseDate) = @year AND MONTH(ExpenseDate) = @month AND UserId = @userId
                 ORDER BY ExpenseDate ASC, Id ASC
             `);
 
@@ -266,15 +267,17 @@ exports.getCalendar = async (req, res) => {
     }
 };
 
-// GET /api/expenses/summary — total summary
+// GET /api/expenses/summary — total summary for current user
 exports.getSummary = async (req, res) => {
     try {
         const pool = await getPool();
         const result = await pool.request()
+            .input('userId', sql.UniqueIdentifier, req.userId)
             .query(`SELECT 
                         COUNT(*) AS totalCount,
                         ISNULL(SUM(Amount), 0) AS totalAmount
-                    FROM Expenses`);
+                    FROM Expenses
+                    WHERE UserId = @userId`);
 
         res.json(result.recordset[0]);
     } catch (err) {

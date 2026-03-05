@@ -2,18 +2,24 @@
 <link rel="stylesheet" href="/expense/assets/css/sidebar.css">
 <aside id="sidebar" class="sidebar flex flex-col h-full shadow-sm bg-white">
     <!-- Header/Logo area -->
-    <div class="p-4 flex items-center justify-between border-b border-slate-100 mb-2">
-        <div class="flex items-center gap-3 logo-container transition-opacity duration-200">
-            <i class="bi bi-wallet2 text-2xl text-blue-600"></i>
-            <span class="font-bold text-blue-600 text-lg logo-text whitespace-nowrap">Expense App</span>
-        </div>
-        <button id="sidebarToggle" class="p-2 hover:bg-slate-100 rounded-lg transition-colors shrink-0">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24"
+    <div class="p-4 pb-5 border-b border-slate-100 mb-2 relative">
+        <button id="sidebarToggle"
+            class="absolute top-3 right-3 p-1.5 hover:bg-slate-100 rounded-lg transition-colors shrink-0 z-10">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
             </svg>
         </button>
+        <div class="flex flex-col items-center gap-2 logo-container transition-opacity duration-200">
+            <img src="/expense/assets/images/system_logo.png" alt="Expense App"
+                class="w-14 h-14 rounded-2xl object-cover shadow-md border-2 border-blue-100">
+            <div class="text-center">
+                <span class="font-bold text-blue-600 text-base logo-text whitespace-nowrap block">Expense App</span>
+                <span
+                    class="text-[10px] font-medium text-slate-400 logo-text whitespace-nowrap block">ระบบบันทึกรายรับรายจ่าย</span>
+            </div>
+        </div>
     </div>
 
     <!-- Nav Links -->
@@ -51,6 +57,21 @@
             </div>
         </div>
     </nav>
+
+    <!-- User Info & Logout -->
+    <div class="p-3 border-t border-slate-100">
+        <div id="sidebarUser" class="flex items-center gap-2 px-2 py-2 rounded-xl bg-slate-50 mb-2 nav-text">
+            <div class="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                <i class="bi bi-person-fill text-blue-600 text-sm"></i>
+            </div>
+            <span id="sidebarUserEmail" class="text-xs text-slate-600 font-medium truncate flex-1">...</span>
+        </div>
+        <button onclick="window.API && window.API.logout()"
+            class="w-full flex items-center justify-center gap-2 py-2 px-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-sm font-medium transition-colors nav-text">
+            <i class="bi bi-box-arrow-right text-base shrink-0"></i>
+            <span class="nav-text">ออกจากระบบ</span>
+        </button>
+    </div>
 
     <!-- Footer / Mobile Toggle -->
     <div class="p-4 border-t border-slate-100 sm:hidden">
@@ -167,6 +188,16 @@
         setInterval(updateSidebarBudget, 30000);
         // Refresh when any page adds or deletes an expense
         window.addEventListener('expense:changed', updateSidebarBudget);
+
+        // Display current user email
+        try {
+            const user = JSON.parse(localStorage.getItem('auth_user') || 'null');
+            const emailEl = document.getElementById('sidebarUserEmail');
+            if (emailEl && user && user.email) {
+                emailEl.textContent = user.email;
+                emailEl.title = user.email;
+            }
+        } catch (e) { /* ignore */ }
     })();
 
     function toggleMobileSidebar() {

@@ -1,6 +1,6 @@
 const { getPool, sql } = require('../db');
 
-// GET /api/budgets?year=YYYY&month=MM — get budget for a month
+// GET /api/budgets?year=YYYY&month=MM — get budget for a month (for current user)
 exports.getBudget = async (req, res) => {
     try {
         const pool = await getPool();
@@ -11,19 +11,21 @@ exports.getBudget = async (req, res) => {
             return res.status(400).json({ error: 'Invalid year or month' });
         }
 
-        // 1. Check if a specific budget exists for this month
+        // 1. Check if a specific budget exists for this month and user
         let result = await pool.request()
             .input('year', sql.Int, year)
             .input('month', sql.Int, month)
-            .query('SELECT Amount FROM Budgets WHERE [Year] = @year AND [Month] = @month');
+            .input('userId', sql.UniqueIdentifier, req.userId)
+            .query('SELECT Amount FROM Budgets WHERE [Year] = @year AND [Month] = @month AND UserId = @userId');
 
         if (result.recordset.length > 0) {
             return res.json({ amount: result.recordset[0].Amount, isCustom: true });
         }
 
-        // 2. Otherwise, get the Master Budget from Settings
+        // 2. Otherwise, get the Master Budget from Settings for this user
         result = await pool.request()
-            .query("SELECT [Value] FROM Settings WHERE [Key] = 'MasterBudget'");
+            .input('userId', sql.UniqueIdentifier, req.userId)
+            .query("SELECT [Value] FROM Settings WHERE [Key] = 'MasterBudget' AND UserId = @userId");
 
         const masterBudget = result.recordset.length > 0 ? parseFloat(result.recordset[0].Value) : 5000;
         res.json({ amount: masterBudget, isCustom: false });
@@ -33,12 +35,13 @@ exports.getBudget = async (req, res) => {
     }
 };
 
-// GET /api/budgets/master — get the master default budget
+// GET /api/budgets/master — get the master default budget for current user
 exports.getMasterBudget = async (req, res) => {
     try {
         const pool = await getPool();
         const result = await pool.request()
-            .query("SELECT [Value] FROM Settings WHERE [Key] = 'MasterBudget'");
+            .input('userId', sql.UniqueIdentifier, req.userId)
+            .query("SELECT [Value] FROM Settings WHERE [Key] = 'MasterBudget' AND UserId = @userId");
 
         const masterBudget = result.recordset.length > 0 ? parseFloat(result.recordset[0].Value) : 5000;
         res.json({ amount: masterBudget });
@@ -48,7 +51,7 @@ exports.getMasterBudget = async (req, res) => {
     }
 };
 
-// POST /api/budgets — Set budget for a specific month
+// POST /api/budgets — Set budget for a specific month (for current user)
 exports.setBudget = async (req, res) => {
     const { year, month, amount } = req.body;
     let transaction;
@@ -64,11 +67,12 @@ exports.setBudget = async (req, res) => {
 
         const request = new sql.Request(transaction);
 
-        // 1. Check if it exists
+        // 1. Check if it exists for this user
         const checkResult = await request
             .input('year', sql.Int, year)
             .input('month', sql.Int, month)
-            .query('SELECT Id FROM Budgets WHERE [Year] = @year AND [Month] = @month');
+            .input('userId', sql.UniqueIdentifier, req.userId)
+            .query('SELECT Id FROM Budgets WHERE [Year] = @year AND [Month] = @month AND UserId = @userId');
 
         if (checkResult.recordset.length > 0) {
             // Update
@@ -76,14 +80,16 @@ exports.setBudget = async (req, res) => {
                 .input('year', sql.Int, year)
                 .input('month', sql.Int, month)
                 .input('amount', sql.Decimal(18, 2), amount)
-                .query('UPDATE Budgets SET Amount = @amount, UpdatedAt = GETDATE() WHERE [Year] = @year AND [Month] = @month');
+                .input('userId', sql.UniqueIdentifier, req.userId)
+                .query('UPDATE Budgets SET Amount = @amount, UpdatedAt = GETDATE() WHERE [Year] = @year AND [Month] = @month AND UserId = @userId');
         } else {
             // Insert
             await new sql.Request(transaction)
                 .input('year', sql.Int, year)
                 .input('month', sql.Int, month)
                 .input('amount', sql.Decimal(18, 2), amount)
-                .query('INSERT INTO Budgets ([Year], [Month], Amount) VALUES (@year, @month, @amount)');
+                .input('userId', sql.UniqueIdentifier, req.userId)
+                .query('INSERT INTO Budgets ([Year], [Month], Amount, UserId) VALUES (@year, @month, @amount, @userId)');
         }
 
         await transaction.commit();
@@ -97,7 +103,7 @@ exports.setBudget = async (req, res) => {
     }
 };
 
-// POST /api/budgets/master — Update the Master Default Budget
+// POST /api/budgets/master — Update the Master Default Budget for current user
 exports.updateMasterBudget = async (req, res) => {
     const { amount } = req.body;
     let transaction;
@@ -114,7 +120,8 @@ exports.updateMasterBudget = async (req, res) => {
         const request = new sql.Request(transaction);
         await request
             .input('amount', sql.NVarChar, amount.toString())
-            .query("UPDATE Settings SET [Value] = @amount, UpdatedAt = GETDATE() WHERE [Key] = 'MasterBudget'");
+            .input('userId', sql.UniqueIdentifier, req.userId)
+            .query("UPDATE Settings SET [Value] = @amount, UpdatedAt = GETDATE() WHERE [Key] = 'MasterBudget' AND UserId = @userId");
 
         await transaction.commit();
         res.json({ message: 'Master budget updated successfully' });
@@ -127,16 +134,16 @@ exports.updateMasterBudget = async (req, res) => {
     }
 };
 
-// GET /api/budgets/logs — fetch audit logs
+// GET /api/budgets/logs — fetch audit logs for current user
 exports.getBudgetLogs = async (req, res) => {
     try {
         const pool = await getPool();
         const result = await pool.request()
-            .query('SELECT TOP 100 * FROM BudgetAuditLog ORDER BY ChangedAt DESC');
+            .input('userId', sql.UniqueIdentifier, req.userId)
+            .query('SELECT TOP 100 * FROM BudgetAuditLog WHERE UserId = @userId ORDER BY ChangedAt DESC');
         res.json(result.recordset);
     } catch (err) {
         console.error('getBudgetLogs error:', err);
         res.status(500).json({ error: 'Failed to fetch logs' });
     }
 };
-
