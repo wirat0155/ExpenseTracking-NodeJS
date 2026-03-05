@@ -4,7 +4,7 @@
 
 (function () {
     const { fmt, confirm: swalConfirm, success, error } = window.Utils;
-    const { getExpenses, getSummary, addExpense, deleteExpense: apiDeleteExpense, getBudget, getDashboardSummary } = window.API;
+    const { getExpenses, getSummary, addExpense, deleteExpense: apiDeleteExpense, getBudget, getDashboardSummary, getCategories } = window.API;
     const state = window.IndexState;
     const ui = window.IndexUI;
 
@@ -270,6 +270,26 @@
     function initForm() {
         expenseForm = document.getElementById('expenseForm');
         expenseDate = document.getElementById('expenseDate');
+        
+        // Handle category selection from datalist
+        const categoryInput = document.getElementById('category');
+        const categoryIdInput = document.getElementById('categoryId');
+        if (categoryInput) {
+            categoryInput.addEventListener('input', function() {
+                // When user types, clear the categoryId
+                categoryIdInput.value = '';
+            });
+            categoryInput.addEventListener('change', function() {
+                const selectedValue = this.value;
+                // Find matching category from ALL_CATEGORIES to get its ID
+                const categories = state.ALL_CATEGORIES || [];
+                // The ALL_CATEGORIES is now an array of objects with Id and Name
+                const categoryObj = window.CATEGORIES_DATA?.find(c => c.Name === selectedValue);
+                if (categoryObj) {
+                    categoryIdInput.value = categoryObj.Id;
+                }
+            });
+        }
         enableSplit = document.getElementById('enableSplit');
         splitMonthsContainer = document.getElementById('splitMonthsContainer');
         splitPreview = document.getElementById('splitPreview');
@@ -314,7 +334,8 @@
                 btn.innerHTML = '<i class="bi bi-hourglass-split animate-spin"></i> กำลังบันทึก...';
 
                 try {
-                    await addExpense({ title, amount, category, expenseDate: expenseDateVal, splitMonths });
+                    const categoryId = document.getElementById('categoryId').value;
+                    await addExpense({ title, amount, categoryId, category, expenseDate: expenseDateVal, splitMonths });
                     await success('✅ บันทึกสำเร็จ');
                     expenseForm.reset();
                     if (splitMonthsContainer) splitMonthsContainer.classList.add('hidden');
@@ -334,11 +355,38 @@
         }
     }
 
+    // Load categories from API
+    async function loadCategories() {
+        try {
+            const categories = await getCategories();
+            // Sort alphabetically
+            categories.sort((a, b) => a.Name.localeCompare(b.Name, 'th'));
+            // Store full category objects for lookup
+            window.CATEGORIES_DATA = categories;
+            state.ALL_CATEGORIES = categories.map(c => c.Name);
+            
+            // Update datalist for searchable dropdown (form)
+            const dataList = document.getElementById('categoryDatalist');
+            if (dataList) {
+                dataList.innerHTML = '';
+                categories.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat.Name;
+                    dataList.appendChild(opt);
+                });
+            }
+            // Also update the category filter list
+            ui.renderCategoryList(state);
+        } catch (err) {
+            console.error('Failed to load categories:', err);
+        }
+    }
+
     // Init page
     document.addEventListener('DOMContentLoaded', () => {
         initForm();
-        ui.renderCategoryList(state);
         Components.load('sidebar-container', '/expense/partials/sidebar.html');
+        loadCategories();
         loadExpenses();
         loadSummaryData();
         Components.load('footer-container', '/expense/partials/footer.html');

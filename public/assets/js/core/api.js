@@ -22,12 +22,12 @@ window.API = {
     },
 
     /**
-     * Handle 401 Unauthorized — redirect to login
+     * Handle 401 Unauthorized — redirect to login (use replace to prevent back button)
      */
     handleUnauthorized() {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('auth_user');
-        window.location.href = '/expense/login.html';
+        window.location.replace('/expense/login.html');
     },
 
     /**
@@ -145,6 +145,35 @@ window.API = {
         return await res.json();
     },
 
+    // --- Category API ---
+    getCategories: async () => {
+        const res = await window.API.authFetch('/api/categories');
+        if (!res.ok) throw new Error('Failed to fetch categories');
+        return await res.json();
+    },
+
+    createCategory: async (name) => {
+        const res = await window.API.authFetch('/api/categories', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.error || 'Failed to create category');
+        }
+        return await res.json();
+    },
+
+    deleteCategory: async (id) => {
+        const res = await window.API.authFetch(`/api/categories/${id}`, { method: 'DELETE' });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.error || 'Failed to delete category');
+        }
+        return true;
+    },
+
     // --- Auth API ---
     login: async (email, password) => {
         const res = await fetch('/api/auth/login', {
@@ -168,6 +197,7 @@ window.API = {
     logout() {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('auth_user');
-        window.location.href = '/expense/login.html';
+        // Use replace to prevent back button access to previous pages
+        window.location.replace('/expense/login.html');
     }
 };

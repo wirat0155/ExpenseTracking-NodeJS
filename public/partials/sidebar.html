@@ -39,6 +39,11 @@
             <i class="bi bi-calendar3 text-xl shrink-0"></i>
             <span class="nav-text whitespace-nowrap opacity-100 transition-opacity duration-200">ปฏิทิน</span>
         </a>
+        <a href="/expense/config.html" id="nav-config"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all group duration-200">
+            <i class="bi bi-gear text-xl shrink-0"></i>
+            <span class="nav-text whitespace-nowrap opacity-100 transition-opacity duration-200">ตั้งค่า</span>
+        </a>
 
         <!-- Sidebar Budget Info -->
         <div id="sidebarBudget"
@@ -97,6 +102,7 @@
             'index.html': 'nav-home',
             'dashboard.html': 'nav-dashboard',
             'calendar.html': 'nav-calendar',
+            'config.html': 'nav-config',
             '/expense/': 'nav-home'
         };
 
@@ -113,7 +119,7 @@
         }
 
         // 2. Apply classes
-        ['nav-home', 'nav-dashboard', 'nav-calendar'].forEach(id => {
+        ['nav-home', 'nav-dashboard', 'nav-calendar', 'nav-config'].forEach(id => {
             const el = document.getElementById(id);
             if (!el) return;
             if (id === activeId) {

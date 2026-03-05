@@ -1,72 +1,94 @@
-# Expense Tracker Web App 📊
+# Expense Tracker
 
-ระบบบันทึกรายรับรายจ่ายแบบ Dashboard ที่สวยงามและใช้งานง่าย มาพร้อมระบบการจัดการงบประมาณ (Budget) รายเดือน
+ระบบบันทึกรายรับรายจ่าย (Expense Tracking System)
 
-## ✨ ฟีเจอร์หลัก (Features)
+## Features
 
-- **📝 บันทึกรายจ่าย**: เพิ่มและลบรายการรายจ่ายได้ง่ายๆ
-- **📅 ระบบปฏิทิน**: ดูสรุปรายจ่ายแต่ละวันในรูปแบบปฏิทิน (Calendar View)
-- **💰 การจัดการงบประมาณ (Budget)**:
-  - ตั้งค่างบประมาณเริ่มต้น (Master Budget)
-  - กำหนดงบประมาณเฉพาะเดือนได้ (Custom Monthly Budget)
-  - แถบความคืบหน้า (Progress Bar) แจ้งเตือนเมื่อใช้เกินงบ
-  - **Sidebar Sync**: งบประมาณบน Sidebar อัปเดตทันทีเมื่อมีการเพิ่มหรือลบรายการ
-- **📊 Dashboard Summary**: 
-  - สรุปยอดรวมเดือนปัจจุบัน
-  - กราฟแท่งแสดงรายจ่ายตามหมวดหมู่
-  - ตารางสรุปประวัติรายเดือน
-- **🗂️ ระบบแบ่งจ่าย (Split Expenses)**: รองรับการบันทึกรายการแบบจ่ายหลายงวด
+- ✅ ระบบ Login/Logout ด้วย JWT Authentication
+- ✅ บันทึกรายจ่ายรายวัน
+- ✅ Dashboard แสดงสถิติรายจ่าย
+- ✅ Calendar view แสดงรายจ่ายในรูปแบบปฏิทิน
+- ✅ ตั้งค่างบประมาณรายเดือน
+- ✅ จัดการหมวดหมู่ (Categories) - หมวดหมู่ระบบ + หมวดหมู่ของผู้ใช้
+- ✅ Responsive Design รองรับมือถือและเดสก์ท็อป
 
-## 🛠️ เทคโนโลยีที่ใช้ (Tech Stack)
+## Tech Stack
 
-- **Frontend**: HTML5, CSS3, Tailwind CSS, Bootstrap Icons
-- **Backend**: Node.js, Express
-- **Database**: SQL Server (MSSQL)
-- **Utilities**: SweetAlert2 (แจ้งเตือน), Google Fonts (IBM Plex Sans Thai)
+- **Backend**: Node.js, Express.js
+- **Database**: SQL Server
+- **Authentication**: JWT (JSON Web Token)
+- **Frontend**: HTML, TailwindCSS, Vanilla JavaScript
 
-## 🚀 การติดตั้ง (Installation)
+## Installation
 
-1. **Clone repository**:
-   ```bash
-   git clone <repository-url>
-   cd expense-tracker
-   ```
+1. Clone repository:
+```bash
+git clone <repository-url>
+cd expense-tracker
+```
 
-2. **ติดตั้ง Dependencies**:
-   ```bash
-   npm install
-   ```
+2. Install dependencies:
+```bash
+npm install
+```
 
-3. **ตั้งค่า Database**:
-   - สร้างฐานข้อมูลใน SQL Server
-   - รันสคริปต์ SQL (ถ้ามี) เพื่อสร้าง Table ที่จำเป็น
+3. สร้างไฟล์ `.env`:
+```env
+DB_CONNECTION_STRING=Server=localhost;Database=ExpenseDB;User Id=sa;Password=your_password;TrustServerCertificate=true;
+PORT=3000
+```
 
-4. **ตั้งค่า Environment Variables**:
-   สร้างไฟล์ `.env` ที่ root directory:
-   ```env
-   DB_USER=your_username
-   DB_PASSWORD=your_password
-   DB_SERVER=localhost
-   DB_DATABASE=ExpenseDB
-   PORT=3000
-   ```
+4. รันโปรเจกต์:
+```bash
+npm run dev
+```
 
-5. **เริ่มรันโปรเจกต์**:
-   ```bash
-   npm start
-   # หรือสำหรับ Development (Auto reload)
-   npm run dev
-   ```
+5. เปิด browser ไปที่: http://localhost:3000
 
-6. เข้าใช้งานผ่าน Browser ที่: `http://localhost:3000/expense`
+## Default Login
 
-## 📦 โครงสร้างโปรเจกต์ (Structure)
+- **Email**: admin@test.com
+- **Password**: admin
 
-- `/public`: ส่วนแสดงผล Frontend และ Assets
-- `/controllers`: ส่วนควบคุม Logic ของ Backend
-- `/routes`: ส่วนจัดการเส้นทาง API
-- `/db`: ส่วนเชื่อมต่อฐานข้อมูล
-- `/test`: ชุดทดสอบระบบ (Test Suite)
+## Project Structure
 
----
-**Version**: 1.0 (20260303)
+```
+├── controllers/        # API controllers
+├── db/                # Database initialization
+├── middleware/        # Express middleware (auth)
+├── public/            # Frontend static files
+│   ├── assets/       # CSS, JS, images
+│   ├── partials/     # HTML components
+│   └── *.html        # Page files
+├── routes/           # API routes
+├── db.js             # Database connection
+├── server.js         # Express server
+└── package.json      # Dependencies
+```
+
+## API Endpoints
+
+### Authentication
+- `POST /api/auth/login` - Login
+- `GET /api/auth/me` - Get current user
+
+### Expenses
+- `GET /api/expenses` - List expenses (with pagination, filter, sort)
+- `POST /api/expenses` - Create expense
+- `DELETE /api/expenses/:id` - Delete expense
+
+### Budgets
+- `GET /api/budgets` - Get monthly budget
+- `POST /api/budgets` - Set budget
+
+### Categories
+- `GET /api/categories` - List categories
+- `POST /api/categories` - Create user category
+- `DELETE /api/categories/:id` - Delete user category
+
+### Dashboard
+- `GET /api/dashboard` - Get dashboard summary
+
+## License
+
+MIT

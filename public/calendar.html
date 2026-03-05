@@ -140,16 +140,9 @@
                     <div>
                         <label class="block text-sm mb-1.5 font-medium text-slate-700">หมวดหมู่ <span
                                 class="text-red-500">*</span></label>
-                        <select id="category" required class="input-custom">
-                            <option value="">-- เลือกหมวดหมู่ --</option>
-                            <option value="อาหารและเครื่องดื่ม">🍔 อาหารและเครื่องดื่ม</option>
-                            <option value="การเดินทาง">🚗 การเดินทาง</option>
-                            <option value="สาธารณูปโภค">💡 สาธารณูปโภค</option>
-                            <option value="การศึกษา">📚 การศึกษา</option>
-                            <option value="สุขภาพ">🏥 สุขภาพ</option>
-                            <option value="ความบันเทิง">🎮 ความบันเทิง</option>
-                            <option value="อื่นๆ">📦 อื่นๆ</option>
-                        </select>
+                        <input type="text" id="category" list="categoryDatalist" required class="input-custom" placeholder="-- พิมพ์ค้นหาหมวดหมู่ --" autocomplete="off">
+                        <input type="hidden" id="categoryId">
+                        <datalist id="categoryDatalist"></datalist>
                     </div>
                     <div>
                         <label class="block text-sm mb-1.5 font-medium text-slate-700">วันที่ <span

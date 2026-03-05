@@ -8,6 +8,7 @@ const authRoutes = require('./routes/auth');
 const expenseRoutes = require('./routes/expenses');
 const dashboardRoutes = require('./routes/dashboard');
 const budgetRoutes = require('./routes/budgets');
+const categoryRoutes = require('./routes/categories');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -29,6 +30,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/expenses', authMiddleware, expenseRoutes);
 app.use('/api/dashboard', authMiddleware, dashboardRoutes);
 app.use('/api/budgets', authMiddleware, budgetRoutes);
+app.use('/api/categories', authMiddleware, categoryRoutes);
 
 // Start server
 const initializeDatabase = require('./db/autoInit');

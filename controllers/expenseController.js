@@ -47,9 +47,9 @@ exports.getExpenses = async (req, res) => {
                 catArray.forEach((cat, i) => {
                     const paramName = `cat_${i}`;
                     catClauses.push(`@${paramName}`);
-                    request.input(paramName, sql.NVarChar, cat);
+                    request.input(paramName, sql.UniqueIdentifier, cat);
                 });
-                whereClauses.push(`Category IN (${catClauses.join(',')})`);
+                whereClauses.push(`CategoryId IN (${catClauses.join(',')})`);
             }
         }
 
@@ -66,15 +66,17 @@ exports.getExpenses = async (req, res) => {
         const finalSortDir = sortDir.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
         // Query Total Count
-        const countQuery = `SELECT COUNT(*) as total FROM Expenses ${whereStr}`;
+        const countQuery = `SELECT COUNT(*) as total FROM Expenses e ${whereStr.replace(/UserId/g, 'e.UserId')}`;
         const countResult = await request.query(countQuery);
         const totalCount = countResult.recordset[0].total;
 
-        // Query Data with Pagination
+        // Query Data with Pagination (join with Categories to get proper category name)
         const dataQuery = `
-            SELECT * FROM Expenses 
-            ${whereStr} 
-            ORDER BY ${finalSortCol} ${finalSortDir}, Id DESC
+            SELECT e.*, c.Name AS Category
+            FROM Expenses e
+            LEFT JOIN Categories c ON e.CategoryId = c.Id
+            ${whereStr.replace(/UserId/g, 'e.UserId')}
+            ORDER BY ${finalSortCol} ${finalSortDir}, e.Id DESC
             OFFSET @offset ROWS FETCH NEXT @rowsLimit ROWS ONLY
         `;
         request.input('offset', sql.Int, offset);
@@ -97,11 +99,12 @@ exports.getExpenses = async (req, res) => {
 
 // POST /api/expenses — create new expense (Handles single and split/distributed expenses)
 exports.createExpense = async (req, res) => {
-    const { title, amount, category, expenseDate, splitMonths } = req.body;
+    const { title, amount, categoryId, category, expenseDate, splitMonths } = req.body;
     let transaction;
 
     try {
-        if (!title || !amount || !category || !expenseDate) {
+        // Accept either categoryId (new) or category name (fallback for backward compatibility)
+        if (!title || !amount || (!categoryId && !category) || !expenseDate) {
             return res.status(400).json({ error: 'All fields are required' });
         }
 
@@ -113,6 +116,17 @@ exports.createExpense = async (req, res) => {
         const pool = await getPool();
         transaction = new sql.Transaction(pool);
         await transaction.begin();
+
+        // Resolve categoryId from category name if not provided
+        let resolvedCategoryId = categoryId;
+        if (!resolvedCategoryId && category) {
+            const catResult = await pool.request()
+                .input('name', sql.NVarChar(100), category)
+                .query('SELECT Id FROM Categories WHERE Name = @name');
+            if (catResult.recordset.length > 0) {
+                resolvedCategoryId = catResult.recordset[0].Id;
+            }
+        }
 
         const results = [];
 
@@ -137,13 +151,14 @@ exports.createExpense = async (req, res) => {
                 const result = await innerReq
                     .input('title', sql.NVarChar(255), fullTitle)
                     .input('amount', sql.Decimal(18, 2), splitAmount)
+                    .input('categoryId', sql.UniqueIdentifier, resolvedCategoryId)
                     .input('category', sql.NVarChar(100), category)
                     .input('expenseDate', sql.Date, formattedDate)
                     .input('groupId', sql.UniqueIdentifier, groupId)
                     .input('userId', sql.UniqueIdentifier, req.userId)
-                    .query(`INSERT INTO Expenses (Title, Amount, Category, ExpenseDate, GroupId, UserId)
+                    .query(`INSERT INTO Expenses (Title, Amount, CategoryId, Category, ExpenseDate, GroupId, UserId)
                             OUTPUT INSERTED.*
-                            VALUES (@title, @amount, @category, @expenseDate, @groupId, @userId)`);
+                            VALUES (@title, @amount, @categoryId, @category, @expenseDate, @groupId, @userId)`);
                 results.push(result.recordset[0]);
             }
             await transaction.commit();
@@ -154,12 +169,13 @@ exports.createExpense = async (req, res) => {
             const result = await request
                 .input('title', sql.NVarChar(255), title)
                 .input('amount', sql.Decimal(18, 2), numAmount)
+                .input('categoryId', sql.UniqueIdentifier, resolvedCategoryId)
                 .input('category', sql.NVarChar(100), category)
                 .input('expenseDate', sql.Date, expenseDate)
                 .input('userId', sql.UniqueIdentifier, req.userId)
-                .query(`INSERT INTO Expenses (Title, Amount, Category, ExpenseDate, UserId)
+                .query(`INSERT INTO Expenses (Title, Amount, CategoryId, Category, ExpenseDate, UserId)
                         OUTPUT INSERTED.*
-                        VALUES (@title, @amount, @category, @expenseDate, @userId)`);
+                        VALUES (@title, @amount, @categoryId, @category, @expenseDate, @userId)`);
 
             await transaction.commit();
             return res.status(201).json(result.recordset[0]);
@@ -232,16 +248,17 @@ exports.getCalendar = async (req, res) => {
             return res.status(400).json({ error: 'Invalid year or month' });
         }
 
-        // Fetch all expenses for the given month for the current user
+        // Fetch all expenses for the given month for the current user (join with Categories)
         const result = await pool.request()
             .input('year', sql.Int, year)
             .input('month', sql.Int, month)
             .input('userId', sql.UniqueIdentifier, req.userId)
             .query(`
-                SELECT Id, Title, Amount, Category, ExpenseDate
-                FROM Expenses
-                WHERE YEAR(ExpenseDate) = @year AND MONTH(ExpenseDate) = @month AND UserId = @userId
-                ORDER BY ExpenseDate ASC, Id ASC
+                SELECT e.Id, e.Title, e.Amount, e.CategoryId, c.Name AS Category, e.ExpenseDate
+                FROM Expenses e
+                LEFT JOIN Categories c ON e.CategoryId = c.Id
+                WHERE YEAR(e.ExpenseDate) = @year AND MONTH(e.ExpenseDate) = @month AND e.UserId = @userId
+                ORDER BY e.ExpenseDate ASC, e.Id ASC
             `);
 
         // Group by date
@@ -256,6 +273,7 @@ exports.getCalendar = async (req, res) => {
                 id: row.Id,
                 title: row.Title,
                 amount: parseFloat(row.Amount),
+                categoryId: row.CategoryId,
                 category: row.Category
             });
         }

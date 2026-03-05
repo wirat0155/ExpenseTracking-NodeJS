@@ -15,8 +15,6 @@ window.IndexState = {
     totalPages: 0,
     totalItems: 0,
 
-    ALL_CATEGORIES: [
-        "อาหารและเครื่องดื่ม", "การเดินทาง", "สาธารณูปโภค",
-        "การศึกษา", "สุขภาพ", "ความบันเทิง", "อื่นๆ"
-    ]
+    // Will be loaded from API
+    ALL_CATEGORIES: []
 };

@@ -4,7 +4,7 @@
 
 (function () {
     const { fmt, fmtShort, escapeHtml, showToast, confirm: swalConfirm, success, error } = window.Utils;
-    const { getCalendarData, addExpense, deleteExpense: apiDeleteExpense } = window.API;
+    const { getCalendarData, addExpense, deleteExpense: apiDeleteExpense, getCategories } = window.API;
 
     let currentYear = new Date().getFullYear();
     let currentMonth = new Date().getMonth() + 1;
@@ -12,6 +12,29 @@
     let openDay = null;
 
     let enableSplit, splitMonthsContainer, splitPreview, previewList, expenseForm;
+
+    // Load categories into dropdown (datalist for search)
+    async function loadCategories() {
+        try {
+            const categories = await getCategories();
+            // Sort alphabetically
+            categories.sort((a, b) => a.Name.localeCompare(b.Name, 'th'));
+            // Store full category objects for lookup
+            window.CATEGORIES_DATA = categories;
+            
+            const dataList = document.getElementById('categoryDatalist');
+            if (dataList) {
+                dataList.innerHTML = '';
+                categories.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat.Name;
+                    dataList.appendChild(opt);
+                });
+            }
+        } catch (err) {
+            console.error('Failed to load categories:', err);
+        }
+    }
 
     window.openAddModal = (dateStr = null) => {
         const modal = document.getElementById('addModal');
@@ -46,12 +69,32 @@
 
     function initAddForm() {
         expenseForm = document.getElementById('expenseForm');
+        
+        // Handle category selection from datalist
+        const categoryInput = document.getElementById('category');
+        const categoryIdInput = document.getElementById('categoryId');
+        if (categoryInput) {
+            categoryInput.addEventListener('input', function() {
+                // When user types, clear the categoryId
+                if (categoryIdInput) categoryIdInput.value = '';
+            });
+            categoryInput.addEventListener('change', function() {
+                const selectedValue = this.value;
+                // Find matching category from CATEGORIES_DATA to get its ID
+                const categoryObj = window.CATEGORIES_DATA?.find(c => c.Name === selectedValue);
+                if (categoryObj && categoryIdInput) {
+                    categoryIdInput.value = categoryObj.Id;
+                }
+            });
+        }
+        
         if (expenseForm) {
             expenseForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const title = document.getElementById('title').value.trim();
                 const amount = parseFloat(document.getElementById('amount').value);
                 const category = document.getElementById('category').value;
+                const categoryId = document.getElementById('categoryId')?.value;
                 const expenseDateVal = document.getElementById('expenseDate').value;
 
                 if (!title || !amount || !category || !expenseDateVal) {
@@ -73,7 +116,7 @@
                 btn.innerHTML = '<i class="bi bi-hourglass-split animate-spin"></i> กำลังบันทึก...';
 
                 try {
-                    await addExpense({ title, amount, category, expenseDate: expenseDateVal, splitMonths });
+                    await addExpense({ title, amount, categoryId, category, expenseDate: expenseDateVal, splitMonths });
                     await success('✅ บันทึกสำเร็จ');
                     window.dispatchEvent(new Event('expense:changed'));
                     window.closeAddModal();
@@ -410,6 +453,7 @@
         previewList = document.getElementById('previewList');
 
         initAddForm();
+        loadCategories();
 
         if (enableSplit) {
             enableSplit.addEventListener('change', (e) => {

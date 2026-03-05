@@ -30,14 +30,15 @@ exports.getDashboardSummary = async (req, res) => {
                         WHERE YEAR(ExpenseDate) = @year AND MONTH(ExpenseDate) = @month AND UserId = @userId
                     `),
 
-                // Expense by category for current user
+                // Expense by category for current user (using CategoryId to join with Categories table)
                 pool.request()
                     .input('userId', sql.UniqueIdentifier, userId)
                     .query(`
-                        SELECT Category AS category, ISNULL(SUM(Amount), 0) AS total
-                        FROM Expenses
-                        WHERE UserId = @userId
-                        GROUP BY Category
+                        SELECT c.Name AS category, ISNULL(SUM(e.Amount), 0) AS total
+                        FROM Expenses e
+                        LEFT JOIN Categories c ON e.CategoryId = c.Id
+                        WHERE e.UserId = @userId
+                        GROUP BY c.Name
                         ORDER BY total DESC
                     `),
 
@@ -56,14 +57,15 @@ exports.getDashboardSummary = async (req, res) => {
                         ORDER BY year DESC, month DESC
                     `),
 
-                // Latest 5 expenses for current user
+                // Latest 5 expenses for current user (join with Categories)
                 pool.request()
                     .input('userId', sql.UniqueIdentifier, userId)
                     .query(`
-                        SELECT TOP 5 Id, Title, Amount, Category, ExpenseDate
-                        FROM Expenses
-                        WHERE UserId = @userId
-                        ORDER BY ExpenseDate DESC, Id DESC
+                        SELECT e.Id, e.Title, e.Amount, e.CategoryId, c.Name AS Category, e.ExpenseDate
+                        FROM Expenses e
+                        LEFT JOIN Categories c ON e.CategoryId = c.Id
+                        WHERE e.UserId = @userId
+                        ORDER BY e.ExpenseDate DESC, e.Id DESC
                     `),
 
                 // Current month budget for current user (with fallback to master)

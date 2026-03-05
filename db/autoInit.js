@@ -24,14 +24,14 @@ async function initializeDatabase() {
 
         // Seed owner user if not exists (password will be set below via bcrypt)
         const userCheck = await pool.request()
-            .input('email', sql.NVarChar(255), 'sunneed.2555@gmail.com')
+            .input('email', sql.NVarChar(255), 'admin@test.com')
             .query('SELECT Id FROM [dbo].[Users] WHERE Email = @email');
 
         let ownerId;
         if (userCheck.recordset.length === 0) {
-            const passwordHash = await bcrypt.hash('sun0155', 10);
+            const passwordHash = await bcrypt.hash('admin', 10);
             const insertUser = await pool.request()
-                .input('email', sql.NVarChar(255), 'sunneed.2555@gmail.com')
+                .input('email', sql.NVarChar(255), 'admin@test.com')
                 .input('passwordHash', sql.NVarChar(255), passwordHash)
                 .query(`
                     INSERT INTO [dbo].[Users] ([Email], [PasswordHash])
@@ -39,7 +39,7 @@ async function initializeDatabase() {
                     VALUES (@email, @passwordHash)
                 `);
             ownerId = insertUser.recordset[0].Id;
-            console.log('✅ Seeded owner user: sunneed.2555@gmail.com');
+            console.log('✅ Seeded owner user: admin@test.com');
         } else {
             ownerId = userCheck.recordset[0].Id;
             console.log('✅ Owner user already exists, Id:', ownerId);
@@ -73,6 +73,48 @@ async function initializeDatabase() {
             END
         `);
         console.log('✅ Checked table: Expenses (with UserId column)');
+
+        // Add CategoryId column to Expenses if it doesn't exist
+        await pool.request().query(`
+            IF NOT EXISTS (
+                SELECT * FROM sys.columns
+                WHERE object_id = OBJECT_ID(N'[dbo].[Expenses]') AND name = 'CategoryId'
+            )
+            BEGIN
+                ALTER TABLE [dbo].[Expenses] ADD [CategoryId] UNIQUEIDENTIFIER NULL;
+            END
+        `);
+        console.log('✅ Added CategoryId column to Expenses');
+
+        // Migrate existing expenses: map Category name to CategoryId (only if Category column exists)
+        const catExists = await pool.request().query(`
+            SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Expenses]') AND name = 'Category'
+        `);
+        if (catExists.recordset.length > 0) {
+            await pool.request().query(`
+                UPDATE e
+                SET e.CategoryId = c.Id
+                FROM [dbo].[Expenses] e
+                INNER JOIN [dbo].[Categories] c ON c.Name = e.Category
+                WHERE e.CategoryId IS NULL
+            `);
+            console.log('✅ Migrated existing expenses to use CategoryId');
+
+            // Drop indexes that depend on Category column
+            await pool.request().query(`
+                IF EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Expenses_MainList' AND object_id = OBJECT_ID('dbo.Expenses'))
+                    DROP INDEX IX_Expenses_MainList ON dbo.Expenses;
+                IF EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Expenses_CalendarView' AND object_id = OBJECT_ID('dbo.Expenses'))
+                    DROP INDEX IX_Expenses_CalendarView ON dbo.Expenses;
+                IF EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Expenses_Dashboard' AND object_id = OBJECT_ID('dbo.Expenses'))
+                    DROP INDEX IX_Expenses_Dashboard ON dbo.Expenses;
+            `);
+            console.log('✅ Dropped indexes depending on Category column');
+
+            // Drop the Category column from Expenses table (no longer needed)
+            await pool.request().query(`ALTER TABLE [dbo].[Expenses] DROP COLUMN [Category]`);
+            console.log('✅ Dropped Category column from Expenses');
+        }
 
         // Seed Sample Data (if table is empty)
         const expenseCheck = await pool.request().query('SELECT TOP 1 1 AS cnt FROM [dbo].[Expenses]');
@@ -214,6 +256,42 @@ async function initializeDatabase() {
                 WHERE [UserId] IS NULL
             `);
         console.log('✅ Checked table: BudgetAuditLog (with UserId column)');
+
+        // 7. Create Categories Table
+        await pool.request().query(`
+            IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Categories]') AND type = N'U')
+            BEGIN
+                CREATE TABLE [dbo].[Categories] (
+                    [Id]          UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
+                    [Name]        NVARCHAR(100)   NOT NULL,
+                    [IsSystem]    BIT             NOT NULL DEFAULT 0,
+                    [UserId]      UNIQUEIDENTIFIER NULL,
+                    [CreatedAt]   DATETIME        DEFAULT GETDATE(),
+                    CONSTRAINT UQ_Categories_Name UNIQUE ([Name], [UserId])
+                );
+            END
+        `);
+        console.log('✅ Checked table: Categories');
+
+        // Seed System Categories if empty
+        const categoryCheck = await pool.request().query('SELECT TOP 1 1 AS cnt FROM [dbo].[Categories] WHERE [IsSystem] = 1');
+        if (categoryCheck.recordset.length === 0) {
+            const systemCategories = [
+                'อาหารและเครื่องดื่ม',
+                'การเดินทาง',
+                'สาธารณูปโภค',
+                'การศึกษา',
+                'สุขภาพ',
+                'ความบันเทิง',
+                'อื่นๆ'
+            ];
+            for (const catName of systemCategories) {
+                await pool.request()
+                    .input('name', sql.NVarChar(100), catName)
+                    .query(`INSERT INTO [dbo].[Categories] ([Name], [IsSystem]) VALUES (@name, 1)`);
+            }
+            console.log('✅ Seeded system categories');
+        }
 
         // 5. Create Trigger for Budgets
         await pool.request().query(`
