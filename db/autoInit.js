@@ -29,7 +29,9 @@ async function initializeDatabase() {
 
         let ownerId;
         if (userCheck.recordset.length === 0) {
-            const passwordHash = await bcrypt.hash('admin', 10);
+            // Default password: Admin@2026! (should be changed on first login)
+            // Meets complexity: 12 chars, uppercase, lowercase, number, special char
+            const passwordHash = await bcrypt.hash('Admin@2026!', 10);
             const insertUser = await pool.request()
                 .input('email', sql.NVarChar(255), 'admin@test.com')
                 .input('passwordHash', sql.NVarChar(255), passwordHash)
@@ -39,7 +41,8 @@ async function initializeDatabase() {
                     VALUES (@email, @passwordHash)
                 `);
             ownerId = insertUser.recordset[0].Id;
-            console.log('✅ Seeded owner user: admin@test.com');
+            console.log('✅ Seeded owner user: admin@test.com / Admin@2026!');
+            console.log('⚠️  SECURITY: Please change the default password on first login!');
         } else {
             ownerId = userCheck.recordset[0].Id;
             console.log('✅ Owner user already exists, Id:', ownerId);
@@ -119,18 +122,33 @@ async function initializeDatabase() {
         // Seed Sample Data (if table is empty)
         const expenseCheck = await pool.request().query('SELECT TOP 1 1 AS cnt FROM [dbo].[Expenses]');
         if (expenseCheck.recordset.length === 0) {
-            await pool.request()
-                .input('userId', sql.UniqueIdentifier, ownerId)
-                .query(`
-                    INSERT INTO [dbo].[Expenses] ([Title], [Amount], [Category], [ExpenseDate], [UserId])
-                    VALUES
-                        (N'ค่ากาแฟ',          85.00,   N'อาหารและเครื่องดื่ม', '2026-03-01', @userId),
-                        (N'ค่าน้ำมันรถ',       1500.00, N'การเดินทาง',          '2026-03-01', @userId),
-                        (N'ค่าอินเทอร์เน็ต',   899.00,  N'สาธารณูปโภค',         '2026-02-28', @userId),
-                        (N'ซื้อหนังสือ',       350.00,  N'การศึกษา',            '2026-02-27', @userId),
-                        (N'ค่าอาหารกลางวัน',   120.00,  N'อาหารและเครื่องดื่ม', '2026-02-26', @userId)
-                `);
-            console.log('✅ Seeded sample expenses');
+            // Get category IDs for seeding
+            const catResult = await pool.request().query(`
+                SELECT Id, Name FROM [dbo].[Categories]
+            `);
+            const categoryMap = {};
+            catResult.recordset.forEach(cat => {
+                categoryMap[cat.Name] = cat.Id;
+            });
+
+            if (categoryMap['อาหารและเครื่องดื่ม'] && categoryMap['การเดินทาง'] && categoryMap['สาธารณูปโภค'] && categoryMap['การศึกษา']) {
+                await pool.request()
+                    .input('userId', sql.UniqueIdentifier, ownerId)
+                    .input('cat1', sql.UniqueIdentifier, categoryMap['อาหารและเครื่องดื่ม'])
+                    .input('cat2', sql.UniqueIdentifier, categoryMap['การเดินทาง'])
+                    .input('cat3', sql.UniqueIdentifier, categoryMap['สาธารณูปโภค'])
+                    .input('cat4', sql.UniqueIdentifier, categoryMap['การศึกษา'])
+                    .query(`
+                        INSERT INTO [dbo].[Expenses] ([Title], [Amount], [CategoryId], [ExpenseDate], [UserId])
+                        VALUES
+                            (N'ค่ากาแฟ',          85.00,   @cat1, '2026-03-01', @userId),
+                            (N'ค่าน้ำมันรถ',       1500.00, @cat2, '2026-03-01', @userId),
+                            (N'ค่าอินเทอร์เน็ต',   899.00,  @cat3, '2026-02-28', @userId),
+                            (N'ซื้อหนังสือ',       350.00,  @cat4, '2026-02-27', @userId),
+                            (N'ค่าอาหารกลางวัน',   120.00,  @cat1, '2026-02-26', @userId)
+                    `);
+                console.log('✅ Seeded sample expenses');
+            }
         } else {
             // Update existing expenses that have no UserId to assign to owner
             await pool.request()

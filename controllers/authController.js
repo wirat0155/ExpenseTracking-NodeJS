@@ -1,6 +1,31 @@
 const { getPool, sql } = require('../db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const Joi = require('joi');
+
+/**
+ * Password complexity requirements:
+ * - Minimum 8 characters
+ * - At least one uppercase letter
+ * - At least one lowercase letter
+ * - At least one number
+ * - At least one special character
+ */
+const passwordComplexityRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
+const loginSchema = Joi.object({
+    email: Joi.string().email().required(),
+    password: Joi.string().min(6).required()
+});
+
+const registerSchema = Joi.object({
+    email: Joi.string().email().required(),
+    password: Joi.string()
+        .min(8)
+        .pattern(passwordComplexityRegex)
+        .message('Password must be at least 8 characters with uppercase, lowercase, number, and special character')
+        .required()
+});
 
 /**
  * POST /api/auth/login
@@ -8,13 +33,16 @@ const jwt = require('jsonwebtoken');
  * Returns: { token, user: { id, email } }
  */
 exports.login = async (req, res) => {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-        return res.status(400).json({ error: 'Email and password are required' });
-    }
-
     try {
+        // Input validation
+        const { error, value } = loginSchema.validate(req.body);
+        if (error) {
+            return res.status(400).json({ error: error.details[0].message });
+        }
+
+        const { email, password } = value;
+
+        // Database lookup
         const pool = await getPool();
         const result = await pool.request()
             .input('email', sql.NVarChar(255), email.trim().toLowerCase())
@@ -25,12 +53,14 @@ exports.login = async (req, res) => {
         }
 
         const user = result.recordset[0];
-        const isMatch = await bcrypt.compare(password, user.PasswordHash);
 
+        // Password verification
+        const isMatch = await bcrypt.compare(password, user.PasswordHash);
         if (!isMatch) {
             return res.status(401).json({ error: 'Invalid email or password' });
         }
 
+        // Generate JWT
         const token = jwt.sign(
             { userId: user.Id, email: user.Email },
             process.env.JWT_SECRET,
