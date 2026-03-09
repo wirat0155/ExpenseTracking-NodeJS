@@ -54,7 +54,7 @@
         content.classList.remove('scale-95');
     };
 
-    window.closeAddModal = () => {
+    function closeAddModal() {
         const modal = document.getElementById('addModal');
         const content = document.getElementById('modalContent');
         if (enableSplit) {
@@ -65,6 +65,15 @@
         modal.classList.add('invisible', 'opacity-0');
         content.classList.add('scale-95');
         if (expenseForm) expenseForm.reset();
+    }
+
+    window.closePopover = () => {
+        const popover = document.getElementById('dayPopover');
+        if (!popover) return;
+        const popoverInner = popover.firstElementChild;
+        popover.classList.add('invisible', 'opacity-0');
+        if (popoverInner) popoverInner.style.transform = '';
+        openDay = null;
     };
 
     function initAddForm() {
@@ -131,7 +140,7 @@
         }
     }
 
-    window.deleteExpenseItem = async (id) => {
+    async function deleteExpenseItem(id) {
         const result = await swalConfirm('คุณต้องการลบรายการนี้ใช่หรือไม่? หากมีรายการที่แบ่งชำระเป็นกลุ่ม ระบบจะลบออกทั้งกลุ่ม', 'ยืนยันการลบ');
         if (!result.isConfirmed) return;
 
@@ -144,23 +153,23 @@
         } catch (err) {
             error('ลบรายการไม่สำเร็จ: ' + err.message);
         }
-    };
+    }
 
-    window.changeMonth = (delta) => {
+    function changeMonth(delta) {
         currentMonth += delta;
         if (currentMonth > 12) { currentMonth = 1; currentYear++; }
         if (currentMonth < 1) { currentMonth = 12; currentYear--; }
         loadCalendar();
-    };
+    }
 
-    window.goToday = () => {
+    function goToday() {
         const n = new Date();
         currentYear = n.getFullYear();
         currentMonth = n.getMonth() + 1;
         loadCalendar();
-    };
+    }
 
-    window.toggleDay = (dateKey, element) => {
+    window.toggleDay = function(dateKey, element) {
         const popover = document.getElementById('dayPopover');
         const content = document.getElementById('popoverContent');
 
@@ -192,7 +201,7 @@
                         <span class="font-medium text-slate-700 truncate mr-2">${escapeHtml(item.title)}</span>
                         <div class="flex items-center gap-2 shrink-0">
                             <span class="font-bold text-blue-600">${fmt(item.amount)}</span>
-                            <button onclick="window.deleteExpenseItem('${item.id}')" class="text-red-400 hover:text-red-600 p-1">
+                            <button onclick="deleteExpenseItem('${item.id}')" class="text-red-400 hover:text-red-600 p-1">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                 </svg>
@@ -277,6 +286,18 @@
             window.closePopover();
         }
     });
+
+    function initEventListeners() {
+        const prevBtn = document.getElementById('prevBtn');
+        const todayBtn = document.getElementById('todayBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+
+        if (prevBtn) prevBtn.addEventListener('click', () => changeMonth(-1));
+        if (todayBtn) todayBtn.addEventListener('click', goToday);
+        if (nextBtn) nextBtn.addEventListener('click', () => changeMonth(1));
+        if (closeModalBtn) closeModalBtn.addEventListener('click', closeAddModal);
+    }
 
     function showCalendarSkeletons() {
         // Skeleton for summary bar stats
@@ -454,6 +475,7 @@
 
         initAddForm();
         loadCategories();
+        initEventListeners();
 
         if (enableSplit) {
             enableSplit.addEventListener('change', (e) => {
