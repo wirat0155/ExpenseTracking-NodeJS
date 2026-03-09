@@ -152,13 +152,12 @@ exports.createExpense = async (req, res) => {
                     .input('title', sql.NVarChar(255), fullTitle)
                     .input('amount', sql.Decimal(18, 2), splitAmount)
                     .input('categoryId', sql.UniqueIdentifier, resolvedCategoryId)
-                    .input('category', sql.NVarChar(100), category)
                     .input('expenseDate', sql.Date, formattedDate)
                     .input('groupId', sql.UniqueIdentifier, groupId)
                     .input('userId', sql.UniqueIdentifier, req.userId)
-                    .query(`INSERT INTO Expenses (Title, Amount, CategoryId, Category, ExpenseDate, GroupId, UserId)
+                    .query(`INSERT INTO Expenses (Title, Amount, CategoryId, ExpenseDate, GroupId, UserId)
                             OUTPUT INSERTED.*
-                            VALUES (@title, @amount, @categoryId, @category, @expenseDate, @groupId, @userId)`);
+                            VALUES (@title, @amount, @categoryId, @expenseDate, @groupId, @userId)`);
                 results.push(result.recordset[0]);
             }
             await transaction.commit();
@@ -170,12 +169,11 @@ exports.createExpense = async (req, res) => {
                 .input('title', sql.NVarChar(255), title)
                 .input('amount', sql.Decimal(18, 2), numAmount)
                 .input('categoryId', sql.UniqueIdentifier, resolvedCategoryId)
-                .input('category', sql.NVarChar(100), category)
                 .input('expenseDate', sql.Date, expenseDate)
                 .input('userId', sql.UniqueIdentifier, req.userId)
-                .query(`INSERT INTO Expenses (Title, Amount, CategoryId, Category, ExpenseDate, UserId)
+                .query(`INSERT INTO Expenses (Title, Amount, CategoryId, ExpenseDate, UserId)
                         OUTPUT INSERTED.*
-                        VALUES (@title, @amount, @categoryId, @category, @expenseDate, @userId)`);
+                        VALUES (@title, @amount, @categoryId, @expenseDate, @userId)`);
 
             await transaction.commit();
             return res.status(201).json(result.recordset[0]);
