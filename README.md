@@ -6,10 +6,11 @@
 
 - ✅ ระบบ Login/Logout ด้วย JWT Authentication
 - ✅ บันทึกรายจ่ายรายวัน
-- ✅ Dashboard แสดงสถิติรายจ่าย
+- ✅ Dashboard แสดงสถิติรายจ่ายพร้อมกราฟ ApexCharts
 - ✅ Calendar view แสดงรายจ่ายในรูปแบบปฏิทิน
-- ✅ ตั้งค่างบประมาณรายเดือน
+- ✅ ตั้งค่างบประมาณรายเดือน (Master Budget & Monthly Budget)
 - ✅ จัดการหมวดหมู่ (Categories) - หมวดหมู่ระบบ + หมวดหมู่ของผู้ใช้
+- ✅ Autocomplete ชื่อรายการจากประวัติเดิม
 - ✅ Responsive Design รองรับมือถือและเดสก์ท็อป
 
 ## Tech Stack
@@ -18,6 +19,7 @@
 - **Database**: SQL Server
 - **Authentication**: JWT (JSON Web Token)
 - **Frontend**: HTML, TailwindCSS, Vanilla JavaScript
+- **Charts**: ApexCharts
 
 ## Installation
 
@@ -47,8 +49,8 @@ npm run dev
 
 ## Default Login
 
-- **Email**: admin@test.com
-- **Password**: admin
+- **Email**: sunneed.2555@gmail.com
+- **Password**: (ตามที่กำหนดใน seed script)
 
 ## Project Structure
 
@@ -74,12 +76,16 @@ npm run dev
 
 ### Expenses
 - `GET /api/expenses` - List expenses (with pagination, filter, sort)
-- `POST /api/expenses` - Create expense
+- `GET /api/expenses/suggestions` - Get expense title suggestions
+- `GET /api/expenses/calendar` - Get calendar data
+- `POST /api/expenses` - Create expense (supports split months)
 - `DELETE /api/expenses/:id` - Delete expense
 
 ### Budgets
 - `GET /api/budgets` - Get monthly budget
-- `POST /api/budgets` - Set budget
+- `GET /api/budgets/master` - Get master budget
+- `POST /api/budgets` - Set monthly budget
+- `POST /api/budgets/master` - Set master budget
 
 ### Categories
 - `GET /api/categories` - List categories
@@ -87,7 +93,7 @@ npm run dev
 - `DELETE /api/categories/:id` - Delete user category
 
 ### Dashboard
-- `GET /api/dashboard` - Get dashboard summary
+- `GET /api/dashboard/summary` - Get dashboard summary with chart data
 
 ## License
 
