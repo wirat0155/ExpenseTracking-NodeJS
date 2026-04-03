@@ -10,7 +10,7 @@ exports.getDashboardSummary = async (req, res) => {
         const month = now.getMonth() + 1;
         const userId = req.userId;
 
-        const [totalResult, currentMonthResult, categoryResult, monthlyResult, latestResult, budgetResult] =
+        const [totalResult, currentMonthResult, categoryResult, monthlyResult, latestResult, budgetResult, chartResult] =
             await Promise.all([
                 // Total expense overall for current user
                 pool.request()
@@ -61,7 +61,7 @@ exports.getDashboardSummary = async (req, res) => {
                 pool.request()
                     .input('userId', sql.UniqueIdentifier, userId)
                     .query(`
-                        SELECT e.Id, e.Title, e.Amount, e.CategoryId, c.Name AS Category, e.ExpenseDate
+                        SELECT TOP 5 e.Id, e.Title, e.Amount, e.CategoryId, c.Name AS Category, e.ExpenseDate
                         FROM Expenses e
                         LEFT JOIN Categories c ON e.CategoryId = c.Id
                         WHERE e.UserId = @userId
@@ -77,6 +77,20 @@ exports.getDashboardSummary = async (req, res) => {
                         SELECT TOP 1 Amount FROM Budgets WHERE [Year] = @year AND [Month] = @month AND UserId = @userId
                         UNION ALL
                         SELECT CAST([Value] AS DECIMAL(18,2)) FROM Settings WHERE [Key] = 'MasterBudget' AND UserId = @userId
+                    `),
+
+                // 12-month chart data for current user
+                pool.request()
+                    .input('userId', sql.UniqueIdentifier, userId)
+                    .query(`
+                        SELECT 
+                            YEAR(ExpenseDate) AS year,
+                            MONTH(ExpenseDate) AS month,
+                            ISNULL(SUM(Amount), 0) AS total
+                        FROM Expenses
+                        WHERE UserId = @userId
+                        GROUP BY YEAR(ExpenseDate), MONTH(ExpenseDate)
+                        ORDER BY year ASC, month ASC
                     `)
             ]);
 
@@ -89,7 +103,8 @@ exports.getDashboardSummary = async (req, res) => {
             currentMonthBudget: currentMonthBudget,
             categorySummary: categoryResult.recordset,
             monthlySummary: monthlyResult.recordset,
-            latestExpenses: latestResult.recordset
+            latestExpenses: latestResult.recordset,
+            chartData: chartResult.recordset
         });
     } catch (err) {
         console.error('getDashboardSummary error:', err);

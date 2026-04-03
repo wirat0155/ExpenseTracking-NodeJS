@@ -17,6 +17,108 @@
 
     function categoryIcon(cat) { return CATEGORY_ICONS[cat] || '<i class="bi bi-box-seam"></i>'; }
 
+    let chartInstance = null;
+
+    function renderChart(data) {
+        const container = document.getElementById('chartContainer');
+        if (!container) return;
+
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1; // 1-12
+
+        // Generate 12 months labels: 6 months ago to 5 months in future
+        const months = [];
+        for (let i = -6; i <= 5; i++) {
+            const d = new Date(currentYear, currentMonth - 1 + i, 1);
+            months.push({
+                year: d.getFullYear(),
+                month: d.getMonth() + 1,
+                label: window.MONTHS_TH_SHORT[d.getMonth() + 1],
+                isCurrent: i === 0
+            });
+        }
+
+        // Map data to months
+        const dataMap = {};
+        if (data) {
+            data.forEach(row => {
+                dataMap[`${row.year}-${row.month}`] = row.total;
+            });
+        }
+
+        const seriesData = months.map(m => dataMap[`${m.year}-${m.month}`] || 0);
+        const categories = months.map(m => `${m.label} ${m.year + 543}`);
+
+        const options = {
+            series: [{
+                name: 'ค่าใช้จ่าย',
+                data: seriesData
+            }],
+            chart: {
+                type: 'bar',
+                height: 350,
+                toolbar: { show: false },
+                fontFamily: 'IBM Plex Sans Thai, sans-serif'
+            },
+            colors: ['#3b82f6'],
+            colors: ['#3b82f6'],
+            plotOptions: {
+                bar: {
+                    borderRadius: 4,
+                    columnWidth: '60%',
+                    dataLabels: {
+                        position: 'top'
+                    }
+                }
+            },
+            series: [{
+                name: 'ค่าใช้จ่าย',
+                data: seriesData,
+                color: function({ dataPointIndex }) {
+                    return dataPointIndex === 6 ? '#f59e0b' : '#3b82f6';
+                }
+            }],
+            series: [{
+                name: 'ค่าใช้จ่าย',
+                data: seriesData,
+                color: function({ dataPointIndex }) {
+                    return dataPointIndex === 6 ? '#f59e0b' : '#3b82f6';
+                }
+            }],
+            xaxis: {
+                categories: categories,
+                labels: {
+                    rotate: -45,
+                    style: {
+                        fontSize: '12px'
+                    }
+                }
+            },
+            yaxis: {
+                labels: {
+                    formatter: (value) => '฿' + value.toLocaleString()
+                }
+            },
+            tooltip: {
+                y: {
+                    formatter: (value) => '฿' + value.toLocaleString()
+                }
+            },
+            grid: {
+                borderColor: '#e2e8f0',
+                strokeDashArray: 4,
+            }
+        };
+
+        if (chartInstance) {
+            chartInstance.updateOptions(options);
+        } else {
+            chartInstance = new ApexCharts(container, options);
+            chartInstance.render();
+        }
+    }
+
     function renderBudgetBar(spent, total) {
         const percent = total > 0 ? (spent / total * 100) : 0;
         const bar = document.getElementById('budgetProgressBar');
@@ -71,6 +173,9 @@
                 getDashboardSummary(),
                 new Promise(r => setTimeout(r, 500))
             ]);
+
+            // Render Chart
+            renderChart(data.chartData);
 
             // Summary cards
             document.getElementById('totalExpense').textContent = fmt(data.totalExpense);
