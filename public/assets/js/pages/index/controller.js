@@ -312,6 +312,8 @@
         });
 
         if (expenseForm) {
+            window.Utils.setupTitleAutocomplete('#title', '#amount', '#category', '#categoryId');
+            
             expenseForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const title = document.getElementById('title').value.trim();

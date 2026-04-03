@@ -54,7 +54,7 @@
         content.classList.remove('scale-95');
     };
 
-    function closeAddModal() {
+    window.closeAddModal = function() {
         const modal = document.getElementById('addModal');
         const content = document.getElementById('modalContent');
         if (enableSplit) {
@@ -98,6 +98,8 @@
         }
         
         if (expenseForm) {
+            window.Utils.setupTitleAutocomplete('#title', '#amount', '#category', '#categoryId');
+            
             expenseForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const title = document.getElementById('title').value.trim();
@@ -140,7 +142,7 @@
         }
     }
 
-    async function deleteExpenseItem(id) {
+    window.deleteExpenseItem = async function(id) {
         const result = await swalConfirm('คุณต้องการลบรายการนี้ใช่หรือไม่? หากมีรายการที่แบ่งชำระเป็นกลุ่ม ระบบจะลบออกทั้งกลุ่ม', 'ยืนยันการลบ');
         if (!result.isConfirmed) return;
 
@@ -296,7 +298,7 @@
         if (prevBtn) prevBtn.addEventListener('click', () => changeMonth(-1));
         if (todayBtn) todayBtn.addEventListener('click', goToday);
         if (nextBtn) nextBtn.addEventListener('click', () => changeMonth(1));
-        if (closeModalBtn) closeModalBtn.addEventListener('click', closeAddModal);
+        if (closeModalBtn) closeModalBtn.addEventListener('click', window.closeAddModal);
     }
 
     function showCalendarSkeletons() {

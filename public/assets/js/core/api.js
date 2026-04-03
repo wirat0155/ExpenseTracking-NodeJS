@@ -77,6 +77,13 @@ window.API = {
         return await res.json();
     },
 
+    // GET expense suggestions
+    getExpenseSuggestions: async (q) => {
+        const res = await window.API.authFetch(`${window.API.expenses}/suggestions?q=${encodeURIComponent(q)}`);
+        if (!res.ok) return [];
+        return await res.json();
+    },
+
     // POST new expense
     addExpense: async (data) => {
         const res = await window.API.authFetch(window.API.expenses, {

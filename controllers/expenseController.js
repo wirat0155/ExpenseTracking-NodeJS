@@ -134,7 +134,16 @@ exports.createExpense = async (req, res) => {
         if (splitMonths && splitMonths > 1) {
             const months = parseInt(splitMonths, 10);
             const splitAmount = numAmount / months;
-            const groupId = crypto.randomUUID();
+            
+            let groupId;
+            if (crypto.randomUUID) {
+                groupId = crypto.randomUUID();
+            } else {
+                // Fallback for Node < 15.6.0 producing a valid GUID string
+                const bytes = crypto.randomBytes(16).toString('hex');
+                groupId = `${bytes.substr(0,8)}-${bytes.substr(8,4)}-${bytes.substr(12,4)}-${bytes.substr(16,4)}-${bytes.substr(20)}`;
+            }
+
             const baseDate = new Date(expenseDate);
             const baseDay = baseDate.getDate();
 
@@ -280,6 +289,37 @@ exports.getCalendar = async (req, res) => {
     } catch (err) {
         console.error('getCalendar error:', err);
         res.status(500).json({ error: 'Failed to fetch calendar data' });
+    }
+};
+
+// GET /api/expenses/suggestions?q=xxx
+exports.getSuggestions = async (req, res) => {
+    try {
+        const pool = await getPool();
+        const { q } = req.query;
+        if (!q || q.length < 3) return res.json([]);
+
+        // Lates matching expenses for autocomplete
+        const result = await pool.request()
+            .input('userId', sql.UniqueIdentifier, req.userId)
+            .input('q', sql.NVarChar, `%${q}%`)
+            .query(`
+                SELECT Title, Amount, CategoryId, c.Name AS Category
+                FROM (
+                    SELECT e.Title, e.Amount, e.CategoryId,
+                           ROW_NUMBER() OVER (PARTITION BY e.Title ORDER BY e.ExpenseDate DESC, e.Id DESC) as rn
+                    FROM Expenses e
+                    WHERE e.UserId = @userId AND e.Title LIKE @q
+                ) t
+                LEFT JOIN Categories c ON t.CategoryId = c.Id
+                WHERE t.rn = 1
+                ORDER BY t.Title ASC
+            `);
+
+        res.json(result.recordset);
+    } catch (err) {
+        console.error('getSuggestions error:', err);
+        res.status(500).json({ error: 'Failed to fetch suggestions' });
     }
 };
 
