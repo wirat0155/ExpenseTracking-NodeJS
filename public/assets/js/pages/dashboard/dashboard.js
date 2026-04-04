@@ -19,7 +19,7 @@
 
     let chartInstance = null;
 
-    function renderChart(data) {
+    function renderChart(data, budgetData) {
         const container = document.getElementById('chartContainer');
         if (!container) return;
 
@@ -50,19 +50,37 @@
         const seriesData = months.map(m => dataMap[`${m.year}-${m.month}`] || 0);
         const categories = months.map(m => `${m.label} ${m.year + 543}`);
 
+        // Map budget data
+        const budgetMap = {};
+        if (budgetData) {
+            budgetData.forEach(row => {
+                budgetMap[`${row.year}-${row.month}`] = row.amount;
+            });
+        }
+        const budgetSeries = months.map(m => budgetMap[`${m.year}-${m.month}`] || 0);
+
         const options = {
-            series: [{
-                name: 'ค่าใช้จ่าย',
-                data: seriesData
-            }],
+            series: [
+                {
+                    name: 'ค่าใช้จ่าย',
+                    data: seriesData,
+                    color: function({ dataPointIndex }) {
+                        return dataPointIndex === 6 ? '#f59e0b' : '#3b82f6';
+                    }
+                },
+                {
+                    name: 'งบประมาณ',
+                    data: budgetSeries,
+                    type: 'line',
+                    color: '#ef4444'
+                }
+            ],
             chart: {
                 type: 'bar',
                 height: 350,
                 toolbar: { show: false },
                 fontFamily: 'IBM Plex Sans Thai, sans-serif'
             },
-            colors: ['#3b82f6'],
-            colors: ['#3b82f6'],
             plotOptions: {
                 bar: {
                     borderRadius: 4,
@@ -72,20 +90,6 @@
                     }
                 }
             },
-            series: [{
-                name: 'ค่าใช้จ่าย',
-                data: seriesData,
-                color: function({ dataPointIndex }) {
-                    return dataPointIndex === 6 ? '#f59e0b' : '#3b82f6';
-                }
-            }],
-            series: [{
-                name: 'ค่าใช้จ่าย',
-                data: seriesData,
-                color: function({ dataPointIndex }) {
-                    return dataPointIndex === 6 ? '#f59e0b' : '#3b82f6';
-                }
-            }],
             xaxis: {
                 categories: categories,
                 labels: {
@@ -108,6 +112,17 @@
             grid: {
                 borderColor: '#e2e8f0',
                 strokeDashArray: 4,
+            },
+            stroke: {
+                width: [0, 3],
+                curve: 'smooth'
+            },
+            dataLabels: {
+                enabled: false
+            },
+            legend: {
+                position: 'top',
+                horizontalAlign: 'right'
             }
         };
 
@@ -169,13 +184,14 @@
         `).join('');
 
         try {
-            const [data] = await Promise.all([
+            const [data, budgetData] = await Promise.all([
                 getDashboardSummary(),
+                API.get12MonthsBudget(),
                 new Promise(r => setTimeout(r, 500))
             ]);
 
             // Render Chart
-            renderChart(data.chartData);
+            renderChart(data.chartData, budgetData);
 
             // Summary cards
             document.getElementById('totalExpense').textContent = fmt(data.totalExpense);

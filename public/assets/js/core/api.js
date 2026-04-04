@@ -152,6 +152,18 @@ window.API = {
         return await res.json();
     },
 
+    get12MonthsBudget: async () => {
+        const res = await window.API.authFetch('/api/budgets/12-months');
+        if (!res.ok) throw new Error('Failed to fetch 12 months budget');
+        return await res.json();
+    },
+
+    get12MonthsBudget: async () => {
+        const res = await window.API.authFetch('/api/budgets/12-months');
+        if (!res.ok) throw new Error('Failed to fetch 12 months budget');
+        return await res.json();
+    },
+
     // --- Category API ---
     getCategories: async () => {
         const res = await window.API.authFetch('/api/categories');

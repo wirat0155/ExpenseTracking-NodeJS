@@ -1,12 +1,28 @@
-/* Sidebar collapsed state styles */
+/* Sidebar transition styles */
+.sidebar .logo-text,
+.sidebar .nav-text {
+    transition: opacity 0.3s ease, width 0.3s ease, margin 0.3s ease;
+    opacity: 1;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
 .sidebar.collapsed .logo-text,
 .sidebar.collapsed .nav-text {
-    display: none;
+    opacity: 0;
+    width: 0;
+    margin: 0;
 }
 
 /* Additional fixes for collapsed state */
-.sidebar.collapsed .logo-container {
-    display: none;
+.sidebar .logo-container img {
+    transition: all 0.3s ease;
+}
+
+.sidebar.collapsed .logo-container img {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.75rem;
 }
 
 .sidebar.collapsed .p-4.flex.justify-between {
@@ -15,21 +31,71 @@
     padding-right: 0.5rem !important;
 }
 
+.sidebar nav a {
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
 .sidebar.collapsed nav a {
     justify-content: center;
     padding-left: 0 !important;
     padding-right: 0 !important;
-    aspect-ratio: 1;
-    /* Make it a square */
+    width: 3rem;
+    height: 3rem;
+    margin-left: auto;
+    margin-right: auto;
+    border-radius: 0.75rem;
     display: flex;
     align-items: center;
+    gap: 0 !important;
 }
 
 .sidebar.collapsed nav a i {
     margin: 0 !important;
+    font-size: 1.25rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+.sidebar #sidebarBudget {
+    transition: opacity 0.3s ease, max-height 0.3s ease, margin 0.3s ease, padding 0.3s ease;
+    opacity: 1;
+    max-height: 200px;
+    overflow: hidden;
 }
 
 .sidebar.collapsed #sidebarBudget {
-    display: none;
-    /* Hide budget widget in collapsed mode */
+    opacity: 0;
+    max-height: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border: none;
+}
+
+/* User Info & Logout */
+.sidebar #sidebarUserEmail {
+    transition: opacity 0.3s ease, width 0.3s ease;
+    opacity: 1;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.sidebar.collapsed #sidebarUserEmail {
+    opacity: 0;
+    width: 0;
+}
+
+.sidebar.collapsed #sidebarUser {
+    justify-content: center;
+    padding: 0.5rem;
+}
+
+.sidebar.collapsed button[onclick="window.API && window.API.logout()"] {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
 }

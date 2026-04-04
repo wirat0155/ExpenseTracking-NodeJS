@@ -134,6 +134,52 @@ exports.updateMasterBudget = async (req, res) => {
     }
 };
 
+// GET /api/budgets/12-months — get budget for 12 months (6 months ago to 5 months in future) for current user
+exports.get12MonthsBudget = async (req, res) => {
+    try {
+        const pool = await getPool();
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1;
+
+        // Get master budget as fallback
+        const masterResult = await pool.request()
+            .input('userId', sql.UniqueIdentifier, req.userId)
+            .query("SELECT [Value] FROM Settings WHERE [Key] = 'MasterBudget' AND UserId = @userId");
+        const masterBudget = masterResult.recordset.length > 0 ? parseFloat(masterResult.recordset[0].Value) : 5000;
+
+        // Get all custom budgets for current user
+        const budgetResult = await pool.request()
+            .input('userId', sql.UniqueIdentifier, req.userId)
+            .query('SELECT [Year], [Month], Amount FROM Budgets WHERE UserId = @userId');
+
+        // Build a map of custom budgets
+        const budgetMap = {};
+        budgetResult.recordset.forEach(row => {
+            budgetMap[`${row.Year}-${row.Month}`] = row.Amount;
+        });
+
+        // Generate 12 months budget data
+        const months = [];
+        for (let i = -6; i <= 5; i++) {
+            const d = new Date(currentYear, currentMonth - 1 + i, 1);
+            const year = d.getFullYear();
+            const month = d.getMonth() + 1;
+            const key = `${year}-${month}`;
+            months.push({
+                year,
+                month,
+                amount: budgetMap[key] !== undefined ? budgetMap[key] : masterBudget
+            });
+        }
+
+        res.json(months);
+    } catch (err) {
+        console.error('get12MonthsBudget error:', err);
+        res.status(500).json({ error: 'Failed to fetch 12 months budget' });
+    }
+};
+
 // GET /api/budgets/logs — fetch audit logs for current user
 exports.getBudgetLogs = async (req, res) => {
     try {
